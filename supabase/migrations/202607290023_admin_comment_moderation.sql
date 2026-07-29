@@ -1,0 +1,2 @@
+create policy "admins read organization comments" on public.comments for select to authenticated using (exists(select 1 from public.posts p where p.id=post_id and public.is_organization_admin(p.organization_id)));
+create policy "admins delete organization comments" on public.comments for delete to authenticated using (exists(select 1 from public.posts p where p.id=post_id and public.is_organization_admin(p.organization_id)));
