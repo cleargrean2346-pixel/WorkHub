@@ -28,7 +28,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Sear
   const { data: current } = await supabase.from('organization_members').select('organization_id,role').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle();
   if (!current || !['organization_admin', 'system_admin'].includes(current.role)) return <main className="onboarding"><section className="onboarding-card"><h1>관리자 권한이 필요합니다</h1><Link className="primary" href="/workspace">내 공간으로</Link></section></main>;
 
-  const { data: rows } = await supabase.from('organization_members').select('user_id,role,status,profiles(full_name,email)').eq('organization_id', current.organization_id).order('joined_at');
+  const { data: rows } = await supabase.from('organization_members').select('user_id,role,status,profiles(full_name)').eq('organization_id', current.organization_id).order('joined_at');
   const members = (rows ?? []) as unknown as Member[];
   const countByRole = Object.fromEntries(roles.map(([role]) => [role, role === 'all' ? members.length : members.filter((member) => member.role === role).length]));
   const visibleMembers = members.filter((member) => {
