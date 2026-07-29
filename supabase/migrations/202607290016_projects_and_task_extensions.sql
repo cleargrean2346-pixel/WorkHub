@@ -6,6 +6,14 @@ alter table public.work_tasks add column if not exists recurrence text check (re
 alter table public.work_tasks add column if not exists archived_at timestamptz;
 create table if not exists public.task_comments (id uuid primary key default gen_random_uuid(), task_id uuid not null references public.work_tasks(id) on delete cascade, author_id uuid not null references public.profiles(id), body text not null, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
 alter table public.projects enable row level security; alter table public.task_comments enable row level security;
+drop policy if exists "members read projects" on public.projects;
+drop policy if exists "members create projects" on public.projects;
+drop policy if exists "creators update projects" on public.projects;
+drop policy if exists "creators delete projects" on public.projects;
+drop policy if exists "members read task comments" on public.task_comments;
+drop policy if exists "members create task comments" on public.task_comments;
+drop policy if exists "authors update task comments" on public.task_comments;
+drop policy if exists "authors delete task comments" on public.task_comments;
 create policy "members read projects" on public.projects for select to authenticated using (public.is_organization_member(organization_id));
 create policy "members create projects" on public.projects for insert to authenticated with check (creator_id=auth.uid() and public.is_organization_member(organization_id));
 create policy "creators update projects" on public.projects for update to authenticated using (creator_id=auth.uid()) with check (creator_id=auth.uid());
