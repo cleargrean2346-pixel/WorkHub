@@ -20,7 +20,8 @@ export default function HomeSidebarCategories() {
         supabase.from('categories').select('id,name').eq('organization_id', membership.organization_id).order('name'),
       ]);
       const ids = settings?.home_category_ids ?? [];
-      setCategories((categoryRows ?? []).filter((category) => ids.includes(category.id)));
+      const allCategories = categoryRows ?? [];
+      setCategories(ids.length ? allCategories.filter((category) => ids.includes(category.id)) : allCategories);
     });
   }, []);
 
