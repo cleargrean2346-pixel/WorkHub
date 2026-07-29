@@ -10,8 +10,9 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-  const { data: post } = await supabase.from('posts').select('id, title, body, status, created_at, author_id').eq('id', id).maybeSingle();
+  const { data: post } = await supabase.from('posts').select('id, title, body, status, created_at, author_id, view_count').eq('id', id).maybeSingle();
   if (!post) notFound();
+  await supabase.rpc('increment_post_views', { target_post_id: post.id });
   const { data: rows } = await supabase.from('comments').select('id, body, created_at, author_id').eq('post_id', post.id).order('created_at');
   const { data: likes } = await supabase.from('likes').select('user_id').eq('post_id', post.id);
   const { data: bookmark } = user ? await supabase.from('bookmarks').select('post_id').eq('post_id', post.id).eq('user_id', user.id).maybeSingle() : { data: null };

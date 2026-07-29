@@ -4,11 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 import { updatePost } from '../../actions';
 
 export default async function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-  const { data: post } = await supabase.from('posts').select('id, title, body, status, author_id').eq('id', id).maybeSingle();
-  if (!post || !user || post.author_id !== user.id) notFound();
-  return <main className="onboarding"><section className="onboarding-card"><Link className="brand" href={`/posts/${post.id}`}><span className="brand-mark">W</span><span>workhub</span></Link><p className="eyebrow"><span /> EDIT POST</p><h1>Edit post</h1><form action={updatePost}><input type="hidden" name="id" value={post.id} /><label htmlFor="title">Title</label><input id="title" name="title" defaultValue={post.title} required maxLength={200} /><label htmlFor="body">Content</label><textarea id="body" name="body" defaultValue={post.body} rows={12} /><label><input type="checkbox" name="publish" defaultChecked={post.status === 'published'} /> Publish</label><button className="primary">Save changes</button></form></section></main>;
+  const { id } = await params; const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) redirect('/login');
+  const { data: post } = await supabase.from('posts').select('id, title, body, status, author_id, organization_id, category_id').eq('id', id).maybeSingle(); if (!post || post.author_id !== user.id) notFound();
+  const { data: categories } = await supabase.from('categories').select('id, name').eq('organization_id', post.organization_id).order('name');
+  const { data: tags } = await supabase.from('tags').select('id, name').eq('organization_id', post.organization_id).order('name');
+  const { data: currentTags } = await supabase.from('post_tags').select('tag_id').eq('post_id', post.id); const currentTagIds = new Set((currentTags ?? []).map((row) => row.tag_id));
+  return <main className="onboarding"><section className="onboarding-card"><Link className="brand" href={`/posts/${post.id}`}><span className="brand-mark">W</span><span>workhub</span></Link><p className="eyebrow"><span /> EDIT POST</p><h1>Edit post</h1><form action={updatePost}><input type="hidden" name="id" value={post.id} /><label htmlFor="title">Title</label><input id="title" name="title" defaultValue={post.title} required maxLength={200} /><label htmlFor="body">Content</label><textarea id="body" name="body" defaultValue={post.body} rows={12} /><label htmlFor="categoryId">Category</label><select id="categoryId" name="categoryId" defaultValue={post.category_id || ''}><option value="">No category</option>{(categories ?? []).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select><fieldset><legend>Tags</legend>{(tags ?? []).map((tag) => <label key={tag.id}><input type="checkbox" name="tagIds" value={tag.id} defaultChecked={currentTagIds.has(tag.id)} /> #{tag.name}</label>)}</fieldset><label><input type="checkbox" name="publish" defaultChecked={post.status === 'published'} /> Publish</label><button className="primary">Save changes</button></form></section></main>;
 }
