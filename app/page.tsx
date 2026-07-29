@@ -24,6 +24,7 @@ export default function Home() {
 
   return <div className="app-shell">
     <aside className="sidebar">
+      <a className="nav-item" href="/me">My page</a>
       <a className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></a>
       <div className="workspace"><span className="avatar gradient">J</span><div><strong>Jupiter Labs</strong><small>Enterprise plan</small></div></div>
       <nav aria-label="주 메뉴"><p className="nav-label">WORKSPACE</p><a className="nav-item active" href="#overview">Overview</a><a className="nav-item" href="#tasks">My tasks <b className="blue">7</b></a><a className="nav-item" href="#calendar">Calendar</a><p className="nav-label second">KNOWLEDGE</p><a className="nav-item" href="#documents">Documents</a><a className="nav-item" href="#members">Members</a></nav>
