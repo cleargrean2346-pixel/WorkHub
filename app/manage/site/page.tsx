@@ -1,0 +1,12 @@
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { updateSiteSettings } from './actions';
+
+export default async function SiteSettingsPage() {
+  const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) redirect('/login');
+  const { data: membership } = await supabase.from('organization_members').select('role').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle();
+  if (!membership || !['organization_admin', 'system_admin'].includes(membership.role)) return <main className="onboarding"><section className="onboarding-card"><h1>Administrator access required</h1><Link className="primary" href="/workspace">Back to workspace</Link></section></main>;
+  const { data: settings } = await supabase.from('site_settings').select('site_title, site_description, maintenance_enabled').eq('id', true).maybeSingle();
+  return <main className="onboarding"><section className="onboarding-card"><Link className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></Link><p className="eyebrow"><span /> ADMIN</p><h1>Site settings</h1><form action={updateSiteSettings}><label htmlFor="siteTitle">Site title</label><input id="siteTitle" name="siteTitle" defaultValue={settings?.site_title || 'WorkHub'} required maxLength={100} /><label htmlFor="siteDescription">Site description</label><textarea id="siteDescription" name="siteDescription" defaultValue={settings?.site_description || ''} required maxLength={300} rows={4} /><label><input type="checkbox" name="maintenanceEnabled" defaultChecked={settings?.maintenance_enabled || false} /> Maintenance mode</label><button className="primary">Save site settings</button></form></section></main>;
+}
