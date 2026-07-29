@@ -96,3 +96,24 @@ export async function createTaxonomy(formData: FormData) {
   if (error) throw new Error('Unable to create item.');
   revalidatePath('/manage/taxonomy');
 }
+
+export async function updateComment(formData: FormData) {
+  const id = String(formData.get('id') ?? '');
+  const postId = String(formData.get('postId') ?? '');
+  const body = String(formData.get('body') ?? '').trim();
+  if (!id || !postId || !body) return;
+  const { supabase } = await currentOrganization();
+  const { error } = await supabase.from('comments').update({ body, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) throw new Error('Unable to update comment.');
+  revalidatePath(`/posts/${postId}`);
+}
+
+export async function deleteComment(formData: FormData) {
+  const id = String(formData.get('id') ?? '');
+  const postId = String(formData.get('postId') ?? '');
+  if (!id || !postId) return;
+  const { supabase } = await currentOrganization();
+  const { error } = await supabase.from('comments').delete().eq('id', id);
+  if (error) throw new Error('Unable to delete comment.');
+  revalidatePath(`/posts/${postId}`);
+}
