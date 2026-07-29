@@ -1,0 +1,6 @@
+create table if not exists public.task_templates (id uuid primary key default gen_random_uuid(), organization_id uuid not null references public.organizations(id) on delete cascade, creator_id uuid not null references public.profiles(id), name text not null check(char_length(name) between 1 and 120), description text not null default '', priority text not null default 'medium' check(priority in ('low','medium','high')), labels text[] not null default '{}', recurrence text check(recurrence in ('daily','weekly','monthly')), created_at timestamptz not null default now());
+alter table public.task_templates enable row level security;
+create policy "members read task templates" on public.task_templates for select to authenticated using(public.is_organization_member(organization_id));
+create policy "members create task templates" on public.task_templates for insert to authenticated with check(creator_id=auth.uid() and public.is_organization_member(organization_id));
+create policy "creators update task templates" on public.task_templates for update to authenticated using(creator_id=auth.uid()) with check(creator_id=auth.uid());
+create policy "creators delete task templates" on public.task_templates for delete to authenticated using(creator_id=auth.uid());
