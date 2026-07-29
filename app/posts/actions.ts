@@ -115,13 +115,7 @@ export async function createTaxonomy(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   if (!['categories', 'tags'].includes(type) || !name) return;
   const { supabase, organizationId } = await currentOrganization();
-  const slug = slugify(name);
-  const payload: { organization_id: string; name: string; slug: string; sort_order?: number } = { organization_id: organizationId, name, slug };
-  if (type === 'categories') {
-    const { data: lastCategory } = await supabase.from('categories').select('sort_order').eq('organization_id', organizationId).order('sort_order', { ascending: false }).limit(1).maybeSingle();
-    payload.sort_order = (lastCategory?.sort_order ?? 0) + 1;
-  }
-  const { error } = await supabase.from(type).insert(payload);
+  const { error } = await supabase.rpc('admin_create_taxonomy', { target_organization_id: organizationId, taxonomy_type: type, taxonomy_name: name });
   if (error) throw new Error('Unable to create item.');
   revalidatePath('/manage/taxonomy');
 }
