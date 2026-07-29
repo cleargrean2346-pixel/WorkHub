@@ -77,3 +77,28 @@ export async function approveMember(formData: FormData) {
   if (error) throw new Error('승인하지 못했습니다.');
   revalidatePath('/workspace');
 }
+
+export async function uploadDocument(formData: FormData) {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const file = formData.get('file');
+  if (!organizationId || !(file instanceof File) || file.size === 0) return;
+  if (file.size > 10 * 1024 * 1024) throw new Error('파일은 10MB 이하만 올릴 수 있습니다.');
+  const { supabase, user } = await requireUser();
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-120) || 'file';
+  const storagePath = `${organizationId}/${user.id}/${crypto.randomUUID()}-${safeName}`;
+  const { error: uploadError } = await supabase.storage.from('workhub-files').upload(storagePath, file, { contentType: file.type || 'application/octet-stream' });
+  if (uploadError) throw new Error('파일 업로드에 실패했습니다.');
+  const { error: documentError } = await supabase.from('documents').insert({
+    organization_id: organizationId,
+    uploader_id: user.id,
+    title: file.name.slice(0, 240),
+    storage_path: storagePath,
+    content_type: file.type || null,
+    size_bytes: file.size,
+  });
+  if (documentError) {
+    await supabase.storage.from('workhub-files').remove([storagePath]);
+    throw new Error('문서 정보를 저장하지 못했습니다.');
+  }
+  revalidatePath('/workspace');
+}
