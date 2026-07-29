@@ -16,9 +16,7 @@ export async function changeMemberRole(formData: FormData) {
   if (!user) redirect('/login');
   const { data: current } = await supabase.from('organization_members').select('role').eq('organization_id', organizationId).eq('user_id', user.id).maybeSingle();
   if (!current || !['organization_admin', 'system_admin'].includes(current.role)) throw new Error('Administrator access required.');
-  const { data: target } = await supabase.from('organization_members').select('role').eq('organization_id', organizationId).eq('user_id', userId).maybeSingle();
-  if (target?.role === 'system_admin') throw new Error('The system administrator role cannot be changed.');
-  const { error } = await supabase.from('organization_members').update({ role }).eq('organization_id', organizationId).eq('user_id', userId);
+  const { error } = await supabase.rpc('admin_set_member_role', { target_organization_id: organizationId, target_user_id: userId, next_role: role });
   if (error) throw new Error('Unable to change member role.');
   revalidatePath('/manage/members');
 }
