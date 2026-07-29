@@ -34,9 +34,11 @@ export async function addComment(formData: FormData) {
   const postId = String(formData.get('postId') ?? '');
   const body = String(formData.get('body') ?? '').trim();
   if (!postId || !body) return;
-  const { supabase, user } = await currentOrganization();
+  const { supabase, user, organizationId } = await currentOrganization();
   const { error } = await supabase.from('comments').insert({ post_id: postId, author_id: user.id, body });
   if (error) throw new Error('Unable to add comment.');
+  const { data: post } = await supabase.from('posts').select('author_id, title').eq('id', postId).maybeSingle();
+  if (post && post.author_id !== user.id) await supabase.rpc('create_organization_notification', { target_user_id: post.author_id, target_organization_id: organizationId, notification_kind: 'comment_added', notification_title: 'New comment on your post', notification_body: post.title, notification_link: `/posts/${postId}` });
   revalidatePath(`/posts/${postId}`);
 }
 

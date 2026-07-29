@@ -65,6 +65,7 @@ export async function inviteMember(formData: FormData) {
     approved_at: null,
   }, { onConflict: 'organization_id,user_id' });
   if (error) throw new Error('팀원 초대 요청을 저장하지 못했습니다.');
+  await supabase.rpc('create_organization_notification', { target_user_id: profile.id, target_organization_id: organizationId, notification_kind: 'member_invited', notification_title: '워크스페이스 초대 대기', notification_body: '관리자 승인을 기다리고 있습니다.', notification_link: '/workspace' });
   revalidatePath('/workspace');
 }
 
@@ -75,6 +76,7 @@ export async function approveMember(formData: FormData) {
   const { supabase, user } = await requireUser();
   const { error } = await supabase.from('organization_members').update({ status: 'approved', approved_by: user.id, approved_at: new Date().toISOString() }).eq('organization_id', organizationId).eq('user_id', userId);
   if (error) throw new Error('승인하지 못했습니다.');
+  await supabase.rpc('create_organization_notification', { target_user_id: userId, target_organization_id: organizationId, notification_kind: 'member_approved', notification_title: '워크스페이스 가입 승인', notification_body: '이제 업무공간을 사용할 수 있습니다.', notification_link: '/workspace' });
   revalidatePath('/workspace');
 }
 

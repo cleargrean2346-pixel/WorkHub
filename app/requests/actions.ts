@@ -30,7 +30,10 @@ export async function decideWorkRequest(formData: FormData) {
   if (!id || !['approved', 'rejected'].includes(status)) return;
   const { supabase, user, membership } = await requestContext();
   if (!['organization_admin', 'system_admin'].includes(membership.role)) throw new Error('Administrator access required.');
+  const { data: request } = await supabase.from('work_requests').select('requester_id, organization_id, title').eq('id', id).maybeSingle();
+  if (!request) throw new Error('Request not found.');
   const { error } = await supabase.from('work_requests').update({ status, approver_id: user.id, decision_note: decisionNote || null, decided_at: new Date().toISOString() }).eq('id', id);
   if (error) throw new Error('Unable to decide request.');
+  await supabase.rpc('create_organization_notification', { target_user_id: request.requester_id, target_organization_id: request.organization_id, notification_kind: 'request_decided', notification_title: `Request ${status}`, notification_body: request.title, notification_link: '/requests' });
   revalidatePath('/requests');
 }
