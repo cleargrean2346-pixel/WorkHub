@@ -25,5 +25,5 @@ export default function HomeSidebarCategories() {
   }, []);
 
   if (!categories.length) return null;
-  return <><p className="nav-label second">CATEGORIES</p>{categories.map((category) => <Link className="nav-item" href={`/posts?category=${category.id}`} key={category.id}>{category.name}</Link>)}</>;
+  return <><p className="nav-label second">카테고리</p>{categories.map((category) => <Link className="nav-item" href={`/posts?category=${category.id}`} key={category.id}>{category.name}</Link>)}</>;
 }
