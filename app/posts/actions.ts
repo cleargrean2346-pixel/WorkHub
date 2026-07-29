@@ -26,11 +26,14 @@ export async function createPost(formData: FormData) {
   const tagIds = formData.getAll('tagIds').map(String).filter(Boolean);
   const coverImageUrl = String(formData.get('coverImageUrl') ?? '').trim();
   const scheduledAt = String(formData.get('scheduledAt') ?? '');
+  const excerpt = String(formData.get('excerpt') ?? '').trim().slice(0, 500);
+  const featured = formData.get('featured') === 'on';
+  const commentsEnabled = formData.get('commentsEnabled') === 'on';
   if (!title) throw new Error('A post title is required.');
   if (coverImageUrl && !/^https?:\/\//.test(coverImageUrl)) throw new Error('Cover image must be a full https URL.');
   const { supabase, user, organizationId } = await currentOrganization();
   const status = publish ? 'published' : scheduledAt ? 'scheduled' : 'draft';
-  const { data, error } = await supabase.from('posts').insert({ organization_id: organizationId, author_id: user.id, title, body, category_id: categoryId || null, cover_image_url: coverImageUrl || null, scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null, slug: slugify(title), status, published_at: publish ? new Date().toISOString() : null }).select('id').single();
+  const { data, error } = await supabase.from('posts').insert({ organization_id: organizationId, author_id: user.id, title, body, excerpt, featured, comments_enabled: commentsEnabled, category_id: categoryId || null, cover_image_url: coverImageUrl || null, scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null, slug: slugify(title), status, published_at: publish ? new Date().toISOString() : null }).select('id').single();
   if (error || !data) throw new Error('Unable to create post.');
   if (tagIds.length) { const { error: tagError } = await supabase.from('post_tags').insert(tagIds.map((tagId) => ({ post_id: data.id, tag_id: tagId }))); if (tagError) throw new Error('Unable to save post tags.'); }
   revalidatePath('/posts');
@@ -42,6 +45,8 @@ export async function addComment(formData: FormData) {
   const body = String(formData.get('body') ?? '').trim();
   if (!postId || !body) return;
   const { supabase, user, organizationId } = await currentOrganization();
+  const { data: postState } = await supabase.from('posts').select('comments_enabled').eq('id', postId).maybeSingle();
+  if (!postState?.comments_enabled) throw new Error('Comments are disabled for this post.');
   const { error } = await supabase.from('comments').insert({ post_id: postId, author_id: user.id, body });
   if (error) throw new Error('Unable to add comment.');
   const { data: post } = await supabase.from('posts').select('author_id, title').eq('id', postId).maybeSingle();
@@ -78,12 +83,16 @@ export async function updatePost(formData: FormData) {
   const tagIds = formData.getAll('tagIds').map(String).filter(Boolean);
   const coverImageUrl = String(formData.get('coverImageUrl') ?? '').trim();
   const scheduledAt = String(formData.get('scheduledAt') ?? '');
+  const excerpt = String(formData.get('excerpt') ?? '').trim().slice(0, 500);
+  const featured = formData.get('featured') === 'on';
+  const commentsEnabled = formData.get('commentsEnabled') === 'on';
   if (!id || !title) throw new Error('A post title is required.');
   if (coverImageUrl && !/^https?:\/\//.test(coverImageUrl)) throw new Error('Cover image must be a full https URL.');
-  const { supabase } = await currentOrganization();
+  const { supabase, user } = await currentOrganization();
   const status = publish ? 'published' : scheduledAt ? 'scheduled' : 'draft';
-  const { error } = await supabase.from('posts').update({ title, body, category_id: categoryId || null, cover_image_url: coverImageUrl || null, scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null, status, published_at: publish ? new Date().toISOString() : null }).eq('id', id);
+  const { error } = await supabase.from('posts').update({ title, body, excerpt, featured, comments_enabled: commentsEnabled, category_id: categoryId || null, cover_image_url: coverImageUrl || null, scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null, status, published_at: publish ? new Date().toISOString() : null, last_edited_at: new Date().toISOString() }).eq('id', id);
   if (error) throw new Error('Unable to update post.');
+  await supabase.from('post_revisions').insert({ post_id: id, editor_id: user.id, title, body, excerpt });
   const { error: deleteTagsError } = await supabase.from('post_tags').delete().eq('post_id', id); if (deleteTagsError) throw new Error('Unable to update post tags.');
   if (tagIds.length) { const { error: tagError } = await supabase.from('post_tags').insert(tagIds.map((tagId) => ({ post_id: id, tag_id: tagId }))); if (tagError) throw new Error('Unable to update post tags.'); }
   revalidatePath('/posts');

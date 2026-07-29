@@ -1,0 +1,12 @@
+alter table public.posts add column if not exists excerpt text not null default '';
+alter table public.posts add column if not exists featured boolean not null default false;
+alter table public.posts add column if not exists comments_enabled boolean not null default true;
+alter table public.posts add column if not exists last_edited_at timestamptz;
+create table if not exists public.post_revisions (id uuid primary key default gen_random_uuid(), post_id uuid not null references public.posts(id) on delete cascade, editor_id uuid not null references public.profiles(id), title text not null, body text not null, excerpt text not null default '', created_at timestamptz not null default now());
+create table if not exists public.post_attachments (id uuid primary key default gen_random_uuid(), post_id uuid not null references public.posts(id) on delete cascade, uploader_id uuid not null references public.profiles(id), file_name text not null, file_url text not null, file_type text, file_size bigint, created_at timestamptz not null default now());
+alter table public.post_revisions enable row level security; alter table public.post_attachments enable row level security;
+create policy "authors read revisions" on public.post_revisions for select to authenticated using (exists(select 1 from public.posts p where p.id=post_id and (p.author_id=auth.uid() or public.is_organization_admin(p.organization_id))));
+create policy "authors create revisions" on public.post_revisions for insert to authenticated with check (editor_id=auth.uid() and exists(select 1 from public.posts p where p.id=post_id and p.author_id=auth.uid()));
+create policy "members read post attachments" on public.post_attachments for select to authenticated using (exists(select 1 from public.posts p where p.id=post_id and public.is_organization_member(p.organization_id)));
+create policy "authors add post attachments" on public.post_attachments for insert to authenticated with check (uploader_id=auth.uid() and exists(select 1 from public.posts p where p.id=post_id and p.author_id=auth.uid()));
+create policy "authors delete post attachments" on public.post_attachments for delete to authenticated using (uploader_id=auth.uid() or exists(select 1 from public.posts p where p.id=post_id and public.is_organization_admin(p.organization_id)));
