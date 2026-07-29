@@ -30,9 +30,10 @@ export async function createTask(formData: FormData) {
   const title = String(formData.get('title') ?? '').trim();
   const organizationId = String(formData.get('organizationId') ?? '');
   const priority = String(formData.get('priority') ?? 'medium');
+  const dueAt = String(formData.get('dueAt') ?? '');
   if (!title || !organizationId || !['low', 'medium', 'high'].includes(priority)) return;
   const { supabase, user } = await requireUser();
-  const { error } = await supabase.from('work_tasks').insert({ organization_id: organizationId, creator_id: user.id, assignee_id: user.id, title, priority });
+  const { error } = await supabase.from('work_tasks').insert({ organization_id: organizationId, creator_id: user.id, assignee_id: user.id, title, priority, due_at: dueAt ? new Date(`${dueAt}T00:00:00`).toISOString() : null });
   if (error) throw new Error('작업을 만들지 못했습니다.');
   revalidatePath('/workspace');
 }
@@ -40,7 +41,7 @@ export async function createTask(formData: FormData) {
 export async function setTaskStatus(formData: FormData) {
   const id = String(formData.get('id') ?? '');
   const status = String(formData.get('status') ?? 'todo');
-  if (!id || !['todo', 'done'].includes(status)) return;
+  if (!id || !['todo', 'in_progress', 'done'].includes(status)) return;
   const { supabase } = await requireUser();
   const { error } = await supabase.from('work_tasks').update({ status }).eq('id', id);
   if (error) throw new Error('작업 상태를 변경하지 못했습니다.');
