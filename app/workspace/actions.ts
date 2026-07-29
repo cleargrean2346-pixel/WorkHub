@@ -1,0 +1,8 @@
+'use server';
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9가-힣]+/g, '-').replace(/(^-|-$)/g, '');
+export async function createOrganization(formData: FormData) { const name = String(formData.get('name') ?? '').trim(); if (!name) return; const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) redirect('/login'); await supabase.from('organizations').insert({ name, slug: `${slugify(name) || 'workspace'}-${crypto.randomUUID().slice(0, 8)}`, created_by: user.id }); revalidatePath('/workspace'); }
+export async function createTask(formData: FormData) { const title = String(formData.get('title') ?? '').trim(); const organizationId = String(formData.get('organizationId') ?? ''); if (!title || !organizationId) return; const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) redirect('/login'); await supabase.from('work_tasks').insert({ organization_id: organizationId, creator_id: user.id, assignee_id: user.id, title, priority: String(formData.get('priority') ?? 'medium') }); revalidatePath('/workspace'); }
+export async function setTaskStatus(formData: FormData) { const id = String(formData.get('id') ?? ''); const status = String(formData.get('status') ?? 'todo'); if (!id) return; const supabase = await createClient(); await supabase.from('work_tasks').update({ status }).eq('id', id); revalidatePath('/workspace'); }
