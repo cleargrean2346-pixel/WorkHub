@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { addComment, deletePost, toggleBookmark, toggleLike } from '../actions';
 
@@ -8,10 +8,11 @@ type Comment = { id: string; body: string; created_at: string };
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
   const { data: post } = await supabase.from('posts').select('id, title, body, status, created_at, author_id').eq('id', id).maybeSingle();
   if (!post) notFound();
   const { data: rows } = await supabase.from('comments').select('id, body, created_at').eq('post_id', post.id).order('created_at');
-  const { data: { user } } = await supabase.auth.getUser();
   const { data: likes } = await supabase.from('likes').select('user_id').eq('post_id', post.id);
   const { data: bookmark } = user ? await supabase.from('bookmarks').select('post_id').eq('post_id', post.id).eq('user_id', user.id).maybeSingle() : { data: null };
   const comments = (rows ?? []) as Comment[];

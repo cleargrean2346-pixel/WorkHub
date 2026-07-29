@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
 type Post = { id: string; title: string; body: string; status: string; created_at: string; published_at: string | null };
@@ -7,7 +8,7 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
   const { q = '' } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) redirect('/login');
   const { data: membership } = await supabase.from('organization_members').select('organization_id').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle();
   if (!membership) return <main className="onboarding"><section className="onboarding-card"><h1>Join a workspace first</h1><Link className="primary" href="/workspace">Open workspace</Link></section></main>;
   const { data: rows } = await supabase.from('posts').select('id, title, body, status, created_at, published_at').eq('organization_id', membership.organization_id).order('created_at', { ascending: false });

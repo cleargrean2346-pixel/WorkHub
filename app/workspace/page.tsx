@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { approveMember, createOrganization, createTask, inviteMember, setTaskStatus, uploadDocument } from './actions';
 import './workspace.css';
@@ -11,7 +12,7 @@ type Member = { user_id: string; role: string; status: string; profiles: { full_
 export default async function WorkspacePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) redirect('/login');
   const { data: membershipRows } = await supabase.from('organization_members').select('organization_id, role, status').eq('user_id', user.id);
   const memberships = (membershipRows ?? []) as Membership[];
   const pendingMembership = memberships.find((item) => item.status === 'pending');
