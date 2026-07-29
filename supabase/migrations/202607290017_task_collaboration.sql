@@ -1,0 +1,10 @@
+alter table public.notifications drop constraint if exists notifications_kind_check;
+alter table public.notifications add constraint notifications_kind_check check (kind in ('member_invited', 'member_approved', 'request_decided', 'comment_added', 'task_assigned', 'task_updated', 'task_due', 'system'));
+create table if not exists public.task_watchers (task_id uuid not null references public.work_tasks(id) on delete cascade, user_id uuid not null references public.profiles(id) on delete cascade, created_at timestamptz not null default now(), primary key (task_id,user_id));
+create table if not exists public.task_activity (id uuid primary key default gen_random_uuid(), task_id uuid not null references public.work_tasks(id) on delete cascade, actor_id uuid not null references public.profiles(id), action text not null check (action in ('created','updated','assigned','commented','archived')), detail text not null default '', created_at timestamptz not null default now());
+alter table public.task_watchers enable row level security; alter table public.task_activity enable row level security;
+create policy "members read task watchers" on public.task_watchers for select to authenticated using (exists(select 1 from public.work_tasks t where t.id=task_id and public.is_organization_member(t.organization_id)));
+create policy "members watch tasks" on public.task_watchers for insert to authenticated with check (user_id=auth.uid() and exists(select 1 from public.work_tasks t where t.id=task_id and public.is_organization_member(t.organization_id)));
+create policy "users unwatch tasks" on public.task_watchers for delete to authenticated using (user_id=auth.uid());
+create policy "members read task activity" on public.task_activity for select to authenticated using (exists(select 1 from public.work_tasks t where t.id=task_id and public.is_organization_member(t.organization_id)));
+create policy "members add task activity" on public.task_activity for insert to authenticated with check (actor_id=auth.uid() and exists(select 1 from public.work_tasks t where t.id=task_id and public.is_organization_member(t.organization_id)));
