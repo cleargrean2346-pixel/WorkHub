@@ -13,7 +13,7 @@ export default async function NewPostPage() {
   if (!membership) return <main className="onboarding"><section className="onboarding-card"><p className="eyebrow"><span /> NEW POST</p><h1>워크스페이스에 먼저 참여하세요</h1><p>승인된 워크스페이스 멤버만 팀 게시글을 작성할 수 있습니다.</p><Link className="primary" href="/workspace">내 공간 열기</Link><Link className="back-link" href="/posts">게시글 목록</Link></section></main>;
 
   const [{ data: categories }, { data: tags }] = await Promise.all([
-    supabase.from('categories').select('id, name').eq('organization_id', membership.organization_id).order('name'),
+    supabase.from('categories').select('id, name').eq('organization_id', membership.organization_id).order('sort_order').order('name'),
     supabase.from('tags').select('id, name').eq('organization_id', membership.organization_id).order('name'),
   ]);
 

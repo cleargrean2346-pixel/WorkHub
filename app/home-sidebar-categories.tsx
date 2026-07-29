@@ -17,7 +17,7 @@ export default function HomeSidebarCategories() {
       if (!membership) return;
       const [{ data: settings }, { data: categoryRows }] = await Promise.all([
         supabase.from('site_settings').select('home_category_ids').eq('id', true).maybeSingle(),
-        supabase.from('categories').select('id,name').eq('organization_id', membership.organization_id).order('name'),
+        supabase.from('categories').select('id,name').eq('organization_id', membership.organization_id).order('sort_order').order('name'),
       ]);
       const ids = settings?.home_category_ids ?? [];
       const allCategories = categoryRows ?? [];
