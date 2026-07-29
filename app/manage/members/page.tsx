@@ -28,8 +28,11 @@ export default async function MembersPage({ searchParams }: { searchParams: Sear
   const { data: current } = await supabase.from('organization_members').select('organization_id,role').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle();
   if (!current || !['organization_admin', 'system_admin'].includes(current.role)) return <main className="onboarding"><section className="onboarding-card"><h1>관리자 권한이 필요합니다</h1><Link className="primary" href="/workspace">내 공간으로</Link></section></main>;
 
-  const { data: rows } = await supabase.from('organization_members').select('user_id,role,status,profiles(full_name)').eq('organization_id', current.organization_id).order('joined_at');
-  const members = (rows ?? []) as unknown as Member[];
+  const { data: memberRows } = await supabase.from('organization_members').select('user_id,role,status').eq('organization_id', current.organization_id).order('joined_at');
+  const baseMembers = memberRows?.length ? memberRows : [{ user_id: user.id, role: current.role, status: 'approved' }];
+  const { data: profileRows } = await supabase.from('profiles').select('id,full_name,email').in('id', baseMembers.map((member) => member.user_id));
+  const profilesById = new Map((profileRows ?? []).map((profile) => [profile.id, { full_name: profile.full_name, email: profile.email }]));
+  const members = baseMembers.map((member) => ({ ...member, profiles: profilesById.get(member.user_id) ?? null })) as Member[];
   const countByRole = Object.fromEntries(roles.map(([role]) => [role, role === 'all' ? members.length : members.filter((member) => member.role === role).length]));
   const visibleMembers = members.filter((member) => {
     const profile = Array.isArray(member.profiles) ? member.profiles[0] : member.profiles;
