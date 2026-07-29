@@ -1,0 +1,7 @@
+{
+  "name": "workhub",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": { "dev": "vite", "build": "vite", "preview": "vite preview" },
+  "devDependencies": { "vite": "^6.0.0" }
+}

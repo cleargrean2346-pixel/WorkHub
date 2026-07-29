@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="WorkHub — 팀을 위한 지식과 업무의 중심" />
+    <title>WorkHub · 업무의 흐름을 하나로</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#"><span class="brand-mark">W</span><span>workhub</span></a>
+        <div class="workspace"><span class="avatar gradient">J</span><div><strong>Jupiter Labs</strong><small>Enterprise plan</small></div><button aria-label="워크스페이스 전환">⌄</button></div>
+        <nav aria-label="주 메뉴">
+          <p class="nav-label">WORKSPACE</p>
+          <a class="nav-item active" href="#overview"><span>⌘</span>Overview</a>
+          <a class="nav-item" href="#projects"><span>◈</span>Projects <b>4</b></a>
+          <a class="nav-item" href="#tasks"><span>✓</span>My tasks <b class="blue">7</b></a>
+          <a class="nav-item" href="#calendar"><span>□</span>Calendar</a>
+          <p class="nav-label second">KNOWLEDGE</p>
+          <a class="nav-item" href="#docs"><span>▤</span>Documents</a>
+          <a class="nav-item" href="#updates"><span>◌</span>Updates</a>
+          <a class="nav-item" href="#members"><span>♧</span>Members</a>
+        </nav>
+        <div class="sidebar-bottom"><button class="upgrade"><span>✦</span><div><strong>Unlock more</strong><small>Upgrade your workspace</small></div><i>›</i></button><a class="nav-item" href="#settings"><span>⚙</span>Settings</a><div class="profile"><span class="avatar portrait">MK</span><div><strong>Min Kim</strong><small>Admin</small></div><button aria-label="프로필 메뉴">⋮</button></div></div>
+      </aside>
+      <main>
+        <header><button class="mobile-menu" aria-label="메뉴">☰</button><div class="crumb">Jupiter Labs <span>/</span> <strong>Overview</strong></div><div class="header-actions"><button class="icon-button" aria-label="검색">⌕</button><button class="icon-button notice" aria-label="알림">♧</button><button class="help">?</button></div></header>
+        <section class="hero" id="overview"><div><p class="eyebrow"><span></span> TUESDAY, JULY 29</p><h1>좋은 아침이에요, 민님 <em>✦</em></h1><p class="hero-copy">오늘은 3개의 우선순위 작업과 2개의 미팅이 있어요.<br/>집중해서 멋진 하루를 만들어 봐요.</p><div class="hero-actions"><button class="primary" id="createTask">+ 새 작업</button><button class="secondary">내 캘린더 보기 <span>→</span></button></div></div><div class="hero-art"><div class="orbit orbit-a"></div><div class="orbit orbit-b"></div><div class="glow"></div><div class="float-card card-one"><span>✦</span><b>Focus mode</b></div><div class="float-card card-two"><span class="mini-avatar">S</span><span class="mini-avatar pink">M</span><span class="mini-avatar orange">D</span><b>+12</b></div><div class="hero-symbol">✦</div></div></section>
+        <section class="metrics"><article><div class="metric-top"><span class="metric-icon lavender">✓</span><span class="trend up">↗ 12%</span></div><strong>12</strong><p>완료한 작업 <span>이번 주</span></p><div class="progress"><i style="width:74%"></i></div></article><article><div class="metric-top"><span class="metric-icon mint">◌</span><span class="trend neutral">+2 today</span></div><strong>8</strong><p>진행 중인 작업</p><div class="avatars"><span class="avatar a1">JD</span><span class="avatar a2">HA</span><span class="avatar a3">SY</span><span class="avatar a4">+5</span></div></article><article><div class="metric-top"><span class="metric-icon peach">□</span><span class="trend down">2 this week</span></div><strong>3</strong><p>다가오는 마감일</p><div class="deadline"><span class="dot red"></span>Product launch <b>Tomorrow</b></div></article></section>
+        <section class="content-grid"><div class="panel tasks" id="tasks"><div class="panel-title"><div><h2>My tasks</h2><p>오늘 해야 할 일들을 확인하세요</p></div><button class="text-button">모두 보기 <span>→</span></button></div><div class="tabs"><button class="selected">오늘 <b>4</b></button><button>다가오는 일정 <b>7</b></button><button>완료됨</button></div><div class="task-list"><label class="task high"><input type="checkbox"/><span class="check"></span><span class="task-text"><b>랜딩 페이지 최종 디자인 검토</b><small><i class="priority red"></i> High priority · Design system</small></span><span class="due urgent">오늘, 11:00</span><span class="avatar task-avatar a1">JD</span></label><label class="task"><input type="checkbox"/><span class="check"></span><span class="task-text"><b>Q3 마케팅 캠페인 브리프 작성</b><small><i class="priority orange"></i> Medium priority · Marketing</small></span><span class="due">오늘, 14:00</span><span class="avatar task-avatar a2">HA</span></label><label class="task"><input type="checkbox"/><span class="check"></span><span class="task-text"><b>신규 입사자 온보딩 문서 업데이트</b><small><i class="priority blue-dot"></i> Low priority · People</small></span><span class="due">오늘, 17:00</span><span class="avatar task-avatar a3">SY</span></label><label class="task done"><input type="checkbox" checked/><span class="check">✓</span><span class="task-text"><b>주간 팀 스탠드업 준비</b><small>Completed at 09:32</small></span><span class="due">완료</span><span class="avatar task-avatar gradient">MK</span></label></div><button class="add-task" id="addTask">＋ 작업 추가</button></div><div class="side-column"><div class="panel schedule" id="calendar"><div class="panel-title"><div><h2>오늘의 일정</h2><p>7월 29일, 화요일</p></div><button class="dots">•••</button></div><div class="meeting"><span class="time">10:00<br/><small>10:30</small></span><i class="meeting-line purple"></i><div><b>Design sync</b><p><span class="video">▣</span> Google Meet · 4명</p></div></div><div class="meeting"><span class="time">15:30<br/><small>16:30</small></span><i class="meeting-line blue-line"></i><div><b>Product roadmap review</b><p><span class="video">▣</span> Zoom · 8명</p></div></div><button class="calendar-link">캘린더에서 모두 보기 <span>→</span></button></div><div class="panel activity" id="updates"><div class="panel-title"><div><h2>최근 활동</h2></div><button class="text-button">모두 보기</button></div><div class="activity-row"><span class="avatar a2">HA</span><p><b>Hana Lee</b>님이 <strong>Marketing</strong>에<br/>새 댓글을 남겼습니다 <small>12분 전</small></p></div><div class="activity-row"><span class="activity-icon">✓</span><p><b>준호</b>님이 작업을 완료했습니다<br/><strong>API 문서화</strong> <small>28분 전</small></p></div></div></div></section>
+      </main>
+    </div>
+    <div class="toast" role="status" aria-live="polite">작업이 추가되었습니다 <button aria-label="닫기">×</button></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
