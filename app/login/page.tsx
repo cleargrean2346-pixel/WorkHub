@@ -11,11 +11,14 @@ export default function LoginPage() {
 
   const googleLogin = async () => {
     setLoading(true);
-    const { error } = await createClient().auth.signInWithOAuth({
+    const { data, error } = await createClient().auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${location.origin}/auth/callback` },
+      options: { redirectTo: `${location.origin}/auth/callback`, skipBrowserRedirect: true },
     });
-    if (error) { setNotice(error.message); setLoading(false); }
+    if (error) { setNotice(error.message); setLoading(false); return; }
+    if (data.url) { window.location.assign(data.url); return; }
+    setNotice('Google 로그인 주소를 생성하지 못했습니다. Provider 설정을 확인해 주세요.');
+    setLoading(false);
   };
 
   const submit = async (event: React.FormEvent) => {
