@@ -39,3 +39,23 @@ export async function addComment(formData: FormData) {
   if (error) throw new Error('Unable to add comment.');
   revalidatePath(`/posts/${postId}`);
 }
+
+export async function toggleLike(formData: FormData) {
+  const postId = String(formData.get('postId') ?? '');
+  if (!postId) return;
+  const { supabase, user } = await currentOrganization();
+  const { data: existing } = await supabase.from('likes').select('post_id').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
+  const { error } = existing ? await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', user.id) : await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
+  if (error) throw new Error('Unable to update like.');
+  revalidatePath(`/posts/${postId}`);
+}
+
+export async function toggleBookmark(formData: FormData) {
+  const postId = String(formData.get('postId') ?? '');
+  if (!postId) return;
+  const { supabase, user } = await currentOrganization();
+  const { data: existing } = await supabase.from('bookmarks').select('post_id').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
+  const { error } = existing ? await supabase.from('bookmarks').delete().eq('post_id', postId).eq('user_id', user.id) : await supabase.from('bookmarks').insert({ post_id: postId, user_id: user.id });
+  if (error) throw new Error('Unable to update bookmark.');
+  revalidatePath(`/posts/${postId}`);
+}
