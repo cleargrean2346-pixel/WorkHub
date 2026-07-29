@@ -31,10 +31,17 @@ export default function HomeSidebarProfile() {
 
   if (!profile) return null;
   const initial = profile.name.slice(0, 1).toUpperCase();
-  return <Link href="/me" aria-label="Open my page" style={{ display: 'block', margin: '12px 0 18px', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,.06)', color: 'inherit', textDecoration: 'none' }}>
+  const isAdmin = ['organization_admin', 'system_admin'].includes(profile.role);
+  return <>
+    <Link href="/me" aria-label="Open my page" style={{ display: 'block', margin: '12px 0 10px', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,.06)', color: 'inherit', textDecoration: 'none' }}>
     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
       {profile.avatarUrl ? <img src={profile.avatarUrl} alt="" width={38} height={38} style={{ borderRadius: '50%', objectFit: 'cover' }} /> : <span className="avatar gradient">{initial}</span>}
       <div style={{ minWidth: 0 }}><strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.name}</strong><small>{roleLabel[profile.role] || profile.role}</small></div>
     </div>
-  </Link>;
+    </Link>
+    <div style={{ display: 'grid', gap: '8px', marginBottom: '18px' }}>
+      <Link href="/posts/new" style={{ display: 'block', padding: '10px 12px', borderRadius: '9px', background: '#536bf4', color: '#fff', textAlign: 'center', textDecoration: 'none', fontSize: '11px', fontWeight: 700 }}>Write post</Link>
+      {isAdmin && <Link href="/manage/dashboard" style={{ display: 'block', padding: '10px 12px', borderRadius: '9px', border: '1px solid #e1e4f7', color: '#536bf4', textAlign: 'center', textDecoration: 'none', fontSize: '11px', fontWeight: 700 }}>Admin page</Link>}
+    </div>
+  </>;
 }
