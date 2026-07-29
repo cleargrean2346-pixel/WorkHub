@@ -86,6 +86,8 @@ export async function uploadDocument(formData: FormData) {
   const file = formData.get('file');
   if (!organizationId || !(file instanceof File) || file.size === 0) return;
   if (file.size > 10 * 1024 * 1024) throw new Error('파일은 10MB 이하만 올릴 수 있습니다.');
+  const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+  if (file.type && !allowedTypes.includes(file.type)) throw new Error('PDF, PNG, JPG, TXT, DOCX 파일만 올릴 수 있습니다.');
   const { supabase, user } = await requireUser();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-120) || 'file';
   const storagePath = `${organizationId}/${user.id}/${crypto.randomUUID()}-${safeName}`;

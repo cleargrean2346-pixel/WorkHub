@@ -1,0 +1,14 @@
+create table if not exists public.document_folders (id uuid primary key default gen_random_uuid(), organization_id uuid not null references public.organizations(id) on delete cascade, name text not null check (char_length(name) between 1 and 120), created_at timestamptz not null default now(), unique (organization_id, name));
+alter table public.documents add column if not exists folder_id uuid references public.document_folders(id) on delete set null;
+alter table public.documents add column if not exists description text not null default '';
+alter table public.documents add column if not exists download_count integer not null default 0;
+create table if not exists public.document_downloads (id uuid primary key default gen_random_uuid(), document_id uuid not null references public.documents(id) on delete cascade, user_id uuid not null references public.profiles(id), created_at timestamptz not null default now());
+alter table public.document_folders enable row level security;
+alter table public.document_downloads enable row level security;
+create policy "members read folders" on public.document_folders for select to authenticated using (public.is_organization_member(organization_id));
+create policy "admins manage folders" on public.document_folders for all to authenticated using (public.is_organization_admin(organization_id)) with check (public.is_organization_admin(organization_id));
+create policy "members read downloads" on public.document_downloads for select to authenticated using (exists (select 1 from public.documents d where d.id = document_id and public.is_organization_member(d.organization_id)));
+create policy "members record downloads" on public.document_downloads for insert to authenticated with check (user_id = auth.uid() and exists (select 1 from public.documents d where d.id = document_id and public.is_organization_member(d.organization_id)));
+create policy "owners update documents" on public.documents for update to authenticated using (uploader_id = auth.uid() or public.is_organization_admin(organization_id)) with check (uploader_id = auth.uid() or public.is_organization_admin(organization_id));
+create or replace function public.increment_document_downloads(target_document_id uuid) returns void language plpgsql security definer set search_path = public as $$ begin update public.documents set download_count = download_count + 1 where id = target_document_id and exists (select 1 from public.documents d where d.id = target_document_id and public.is_organization_member(d.organization_id)); end; $$;
+grant execute on function public.increment_document_downloads(uuid) to authenticated;
