@@ -59,3 +59,38 @@ export async function toggleBookmark(formData: FormData) {
   if (error) throw new Error('Unable to update bookmark.');
   revalidatePath(`/posts/${postId}`);
 }
+
+export async function updatePost(formData: FormData) {
+  const id = String(formData.get('id') ?? '');
+  const title = String(formData.get('title') ?? '').trim();
+  const body = String(formData.get('body') ?? '').trim();
+  const publish = formData.get('publish') === 'on';
+  if (!id || !title) throw new Error('A post title is required.');
+  const { supabase } = await currentOrganization();
+  const { error } = await supabase.from('posts').update({ title, body, status: publish ? 'published' : 'draft', published_at: publish ? new Date().toISOString() : null }).eq('id', id);
+  if (error) throw new Error('Unable to update post.');
+  revalidatePath('/posts');
+  revalidatePath(`/posts/${id}`);
+  redirect(`/posts/${id}`);
+}
+
+export async function deletePost(formData: FormData) {
+  const id = String(formData.get('id') ?? '');
+  if (!id) return;
+  const { supabase } = await currentOrganization();
+  const { error } = await supabase.from('posts').delete().eq('id', id);
+  if (error) throw new Error('Unable to delete post.');
+  revalidatePath('/posts');
+  redirect('/posts');
+}
+
+export async function createTaxonomy(formData: FormData) {
+  const type = String(formData.get('type') ?? '');
+  const name = String(formData.get('name') ?? '').trim();
+  if (!['categories', 'tags'].includes(type) || !name) return;
+  const { supabase, organizationId } = await currentOrganization();
+  const slug = slugify(name);
+  const { error } = await supabase.from(type).insert({ organization_id: organizationId, name, slug });
+  if (error) throw new Error('Unable to create item.');
+  revalidatePath('/manage/taxonomy');
+}
