@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 
 const tasks = [
   ['랜딩 페이지 최종 디자인 검토', 'High priority · Design system', '오늘, 11:00'],
@@ -12,12 +11,7 @@ const tasks = [
 export default function Home() {
   const [completed, setCompleted] = useState<number[]>([]);
   const [message, setMessage] = useState('');
-  const login = async () => {
-    const email = window.prompt('로그인 링크를 받을 이메일 주소를 입력하세요.');
-    if (!email) return;
-    const { error } = await createClient().auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } });
-    setMessage(error ? `오류: ${error.message}` : '로그인 링크를 이메일로 보냈습니다.');
-  };
+  const login = () => { window.location.href = '/login'; };
   const toggle = (index: number) => setCompleted(current => current.includes(index) ? current.filter(i => i !== index) : [...current, index]);
   return <div className="app-shell">
     <aside className="sidebar"><a className="brand" href="#"><span className="brand-mark">W</span><span>workhub</span></a><div className="workspace"><span className="avatar gradient">J</span><div><strong>Jupiter Labs</strong><small>Enterprise plan</small></div></div><nav aria-label="주 메뉴"><p className="nav-label">WORKSPACE</p><a className="nav-item active" href="#overview"><span>⌘</span>Overview</a><a className="nav-item" href="#tasks"><span>✓</span>My tasks <b className="blue">7</b></a><a className="nav-item" href="#calendar"><span>□</span>Calendar</a><p className="nav-label second">KNOWLEDGE</p><a className="nav-item" href="#documents"><span>▤</span>Documents</a><a className="nav-item" href="#members"><span>♧</span>Members</a></nav><div className="sidebar-bottom"><button className="upgrade" onClick={login}><span>✦</span><div><strong>로그인 시작</strong><small>이메일 매직 링크 사용</small></div><i>›</i></button></div></aside>

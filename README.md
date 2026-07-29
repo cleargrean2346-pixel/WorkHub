@@ -25,3 +25,9 @@ Vercel Project → Settings → Environment Variables에 아래 값을 추가합
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase의 anon/publishable key |
 
 `service_role` 키와 데이터베이스 비밀번호는 Vercel 또는 GitHub에 넣지 마세요.
+
+## Google 로그인 설정
+
+1. Google Cloud Console에서 OAuth 2.0 Web Client를 만들고, Authorized redirect URI로 `https://wfitoyzhsjauiyiaglrl.supabase.co/auth/v1/callback`을 추가합니다.
+2. Supabase **Authentication → Providers → Google**에서 Provider를 켜고 Google Client ID와 Client Secret을 직접 입력합니다.
+3. Supabase **Authentication → URL Configuration**의 Redirect URLs에 `https://work-2go6ymryn-jun-hui.vercel.app/auth/callback`을 추가합니다.
