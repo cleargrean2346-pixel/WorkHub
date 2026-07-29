@@ -1,0 +1,5 @@
+create table if not exists public.user_notification_preferences (user_id uuid primary key references public.profiles(id) on delete cascade, in_app_enabled boolean not null default true, email_enabled boolean not null default false, member_updates boolean not null default true, comment_updates boolean not null default true, task_updates boolean not null default true, request_updates boolean not null default true, quiet_hours_start time, quiet_hours_end time, updated_at timestamptz not null default now());
+alter table public.user_notification_preferences enable row level security;
+create policy "users read notification preferences" on public.user_notification_preferences for select to authenticated using(user_id=auth.uid());
+create policy "users create notification preferences" on public.user_notification_preferences for insert to authenticated with check(user_id=auth.uid());
+create policy "users update notification preferences" on public.user_notification_preferences for update to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
