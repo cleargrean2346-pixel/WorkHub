@@ -1,13 +1,39 @@
-import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
-import './workspace/workspace.css';
+'use client';
 
-export default async function Home() {
-  const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <main className="onboarding"><section className="onboarding-card"><Link className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></Link><p className="eyebrow"><span /> WORKHUB</p><h1>Work together with clarity.</h1><p>Organize your team’s work, knowledge, documents, and updates in one place.</p><Link className="primary" href="/login">Log in to WorkHub</Link><Link className="secondary" href="/posts">Browse public posts</Link></section></main>;
-  const { data: membership } = await supabase.from('organization_members').select('organization_id').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle();
-  if (!membership) return <main className="onboarding"><section className="onboarding-card"><h1>Welcome to WorkHub</h1><p>Create or join a workspace to begin.</p><Link className="primary" href="/workspace">Open workspace</Link></section></main>;
-  const org = membership.organization_id; const today = new Date().toISOString(); const [{ data: tasks }, { data: posts }, { data: notices }, { data: alerts }] = await Promise.all([supabase.from('work_tasks').select('id,title,status,due_at,priority').eq('organization_id', org).is('archived_at', null).or(`assignee_id.eq.${user.id},creator_id.eq.${user.id}`).order('due_at').limit(8), supabase.from('posts').select('id,title,created_at').eq('organization_id',org).eq('status','published').order('created_at',{ascending:false}).limit(5), supabase.from('notices').select('id,title,pinned,created_at').eq('organization_id',org).eq('status','published').order('pinned',{ascending:false}).order('created_at',{ascending:false}).limit(3), supabase.from('notifications').select('id').eq('user_id',user.id).is('read_at',null)]);
-  const active=(tasks??[]).filter(t=>t.status!=='done').length; const overdue=(tasks??[]).filter(t=>t.due_at&&new Date(t.due_at)<new Date()&&t.status!=='done').length;
-  return <main className="workspace-page"><header className="workspace-header"><Link className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></Link><div><strong>Overview</strong><small>{user.email}</small></div><div className="hero-actions"><Link className="secondary" href="/notifications">{alerts?.length??0} alerts</Link><Link className="primary" href="/workspace">Workspace</Link></div></header><section className="workspace-content"><div className="workspace-intro"><p className="eyebrow"><span /> DASHBOARD</p><h1>Your workspace at a glance</h1><p>Keep track of what needs your attention today.</p></div><section className="workspace-grid"><article className="workspace-panel"><h2>Active tasks</h2><p>{active}</p><Link href="/tasks">View tasks</Link></article><article className="workspace-panel"><h2>Overdue tasks</h2><p>{overdue}</p><Link href="/calendar">Open schedule</Link></article><article className="workspace-panel"><h2>Unread alerts</h2><p>{alerts?.length??0}</p><Link href="/notifications">Open notifications</Link></article></section><section className="workspace-grid"><section className="workspace-panel"><div className="workspace-panel-title"><h2>My tasks</h2><Link href="/tasks">All tasks</Link></div>{(tasks??[]).map(t=><Link className="live-task" href={`/tasks/${t.id}`} key={t.id}><div><b>{t.title}</b><small>{t.status} · {t.priority} · {t.due_at?new Date(t.due_at).toLocaleDateString('ko-KR'):'No deadline'}</small></div></Link>)}</section><section className="workspace-panel"><div className="workspace-panel-title"><h2>Latest posts</h2><Link href="/posts">All posts</Link></div>{(posts??[]).map(p=><Link className="live-task" href={`/posts/${p.id}`} key={p.id}><div><b>{p.title}</b><small>{new Date(p.created_at).toLocaleDateString('ko-KR')}</small></div></Link>)}</section><section className="workspace-panel"><div className="workspace-panel-title"><h2>Notices</h2><Link href="/notices">All notices</Link></div>{(notices??[]).map(n=><Link className="live-task" href="/notices" key={n.id}><div><b>{n.pinned?'Pinned · ':''}{n.title}</b><small>{new Date(n.created_at).toLocaleDateString('ko-KR')}</small></div></Link>)}</section></section></section></main>;
+import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+
+const tasks = [
+  ['디자인 페이지 최종 사용자 검토', 'High priority · Design system', '오늘, 11:00'],
+  ['Q3 마케팅 캠페인 브리프 작성', 'Medium priority · Marketing', '오늘, 14:00'],
+  ['신규 입사자 온보딩 문서 업데이트', 'Low priority · People', '오늘, 17:00'],
+];
+
+export default function Home() {
+  const [completed, setCompleted] = useState<number[]>([]);
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const client = createClient();
+    client.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+  }, []);
+
+  const goToWorkspace = () => { window.location.href = email ? '/workspace' : '/login'; };
+  const logout = async () => { await createClient().auth.signOut(); setEmail(null); };
+  const toggle = (index: number) => setCompleted((current) => current.includes(index) ? current.filter((item) => item !== index) : [...current, index]);
+
+  return <div className="app-shell">
+    <aside className="sidebar">
+      <a className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></a>
+      <div className="workspace"><span className="avatar gradient">J</span><div><strong>Jupiter Labs</strong><small>Enterprise plan</small></div></div>
+      <nav aria-label="주 메뉴"><p className="nav-label">WORKSPACE</p><a className="nav-item active" href="#overview">Overview</a><a className="nav-item" href="#tasks">My tasks <b className="blue">7</b></a><a className="nav-item" href="#calendar">Calendar</a><p className="nav-label second">KNOWLEDGE</p><a className="nav-item" href="#documents">Documents</a><a className="nav-item" href="#members">Members</a></nav>
+      <div className="sidebar-bottom">{email ? <><button className="upgrade" onClick={goToWorkspace}><div><strong>내 공간으로 이동</strong><small>{email}</small></div></button><button className="text-button" onClick={logout}>로그아웃</button></> : <button className="upgrade" onClick={goToWorkspace}><div><strong>로그인하고 시작</strong><small>Google 또는 이메일로 로그인</small></div></button>}</div>
+    </aside>
+    <main>
+      <header><div className="crumb">Jupiter Labs <span>/</span> <strong>Overview</strong></div><div className="header-actions"><button className="help" onClick={goToWorkspace}>{email ? '내 공간' : '로그인'}</button></div></header>
+      <section className="hero" id="overview"><div><p className="eyebrow"><span /> WORKHUB</p><h1>{email ? '로그인되었습니다' : '좋은 아침이에요'}, <em>✦</em></h1><p className="hero-copy">{email ? `${email} 계정으로 로그인 중입니다.` : '할 일을 정리하고 팀과 함께 더 나은 하루를 만들어 보세요.'}</p><div className="hero-actions"><button className="primary" onClick={goToWorkspace}>{email ? '내 공간 열기' : '로그인하기'}</button></div></div><div className="hero-art"><div className="orbit orbit-a"/><div className="orbit orbit-b"/><div className="glow"/><div className="hero-symbol">✦</div></div></section>
+      <section className="metrics"><article><strong>12</strong><p>완료한 작업 <span>이번 주</span></p><div className="progress"><i style={{ width: '74%' }}/></div></article><article><strong>8</strong><p>진행 중인 작업</p></article><article><strong>3</strong><p>다가오는 마감일</p></article></section>
+      <section className="content-grid"><div className="panel tasks" id="tasks"><div className="panel-title"><div><h2>My tasks</h2><p>오늘 해야 할 일들을 확인하세요.</p></div></div><div className="task-list">{tasks.map(([title, detail, due], index) => <label className={`task ${completed.includes(index) ? 'done' : ''}`} key={title}><input type="checkbox" checked={completed.includes(index)} onChange={() => toggle(index)}/><span className="check">{completed.includes(index) ? '✓' : ''}</span><span className="task-text"><b>{title}</b><small>{detail}</small></span><span className="due">{due}</span></label>)}</div></div><div className="side-column"><div className="panel schedule" id="calendar"><div className="panel-title"><div><h2>오늘의 일정</h2><p>7월 29일, 화요일</p></div></div><div className="meeting"><span className="time">10:00</span><div><b>Design sync</b><p>Google Meet · 4명</p></div></div><div className="meeting"><span className="time">15:30</span><div><b>Product roadmap review</b><p>Zoom · 8명</p></div></div></div></div></section>
+    </main>
+  </div>;
 }
