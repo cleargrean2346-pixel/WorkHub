@@ -28,4 +28,4 @@ using (bucket_id = 'workhub-files' and public.is_organization_member((storage.fo
 create policy "members upload workhub files" on storage.objects for insert to authenticated
 with check (bucket_id = 'workhub-files' and public.is_organization_member((storage.foldername(name))[1]::uuid));
 create policy "owners and admins delete workhub files" on storage.objects for delete to authenticated
-using (bucket_id = 'workhub-files' and (owner_id = auth.uid() or public.is_organization_admin((storage.foldername(name))[1]::uuid)));
+using (bucket_id = 'workhub-files' and (owner_id = auth.uid()::text or public.is_organization_admin((storage.foldername(name))[1]::uuid)));
