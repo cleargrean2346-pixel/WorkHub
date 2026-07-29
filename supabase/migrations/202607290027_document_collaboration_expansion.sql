@@ -1,0 +1,15 @@
+alter table public.documents add column if not exists description text not null default '';
+alter table public.documents add column if not exists favorite_count integer not null default 0;
+alter table public.documents add column if not exists last_accessed_at timestamptz;
+create table if not exists public.document_favorites (document_id uuid not null references public.documents(id) on delete cascade, user_id uuid not null references public.profiles(id) on delete cascade, created_at timestamptz not null default now(), primary key(document_id,user_id));
+create table if not exists public.document_access_logs (id uuid primary key default gen_random_uuid(), document_id uuid not null references public.documents(id) on delete cascade, user_id uuid references public.profiles(id) on delete set null, action text not null check(action in ('view','download','share')), created_at timestamptz not null default now());
+create table if not exists public.document_share_links (id uuid primary key default gen_random_uuid(), document_id uuid not null references public.documents(id) on delete cascade, created_by uuid not null references public.profiles(id), token uuid not null default gen_random_uuid() unique, expires_at timestamptz, revoked_at timestamptz, created_at timestamptz not null default now());
+alter table public.document_favorites enable row level security; alter table public.document_access_logs enable row level security; alter table public.document_share_links enable row level security;
+create policy "members read document favorites" on public.document_favorites for select to authenticated using (exists(select 1 from public.documents d where d.id=document_id and public.is_organization_member(d.organization_id)));
+create policy "users favorite documents" on public.document_favorites for insert to authenticated with check(user_id=auth.uid() and exists(select 1 from public.documents d where d.id=document_id and public.is_organization_member(d.organization_id)));
+create policy "users unfavorite documents" on public.document_favorites for delete to authenticated using(user_id=auth.uid());
+create policy "members read document access logs" on public.document_access_logs for select to authenticated using (exists(select 1 from public.documents d where d.id=document_id and public.is_organization_member(d.organization_id)));
+create policy "members log document access" on public.document_access_logs for insert to authenticated with check(user_id=auth.uid());
+create policy "members read document shares" on public.document_share_links for select to authenticated using (exists(select 1 from public.documents d where d.id=document_id and public.is_organization_member(d.organization_id)));
+create policy "owners create document shares" on public.document_share_links for insert to authenticated with check(created_by=auth.uid() and exists(select 1 from public.documents d where d.id=document_id and (d.uploader_id=auth.uid() or public.is_organization_admin(d.organization_id))));
+create policy "owners revoke document shares" on public.document_share_links for update to authenticated using(created_by=auth.uid());
