@@ -102,3 +102,24 @@ export async function uploadDocument(formData: FormData) {
   }
   revalidatePath('/workspace');
 }
+
+export async function openDocument(formData: FormData) {
+  const storagePath = String(formData.get('storagePath') ?? '');
+  if (!storagePath) return;
+  const { supabase } = await requireUser();
+  const { data, error } = await supabase.storage.from('workhub-files').createSignedUrl(storagePath, 60);
+  if (error || !data?.signedUrl) throw new Error('Unable to create a secure document link.');
+  redirect(data.signedUrl);
+}
+
+export async function deleteDocument(formData: FormData) {
+  const id = String(formData.get('id') ?? '');
+  const storagePath = String(formData.get('storagePath') ?? '');
+  if (!id || !storagePath) return;
+  const { supabase } = await requireUser();
+  const { error: storageError } = await supabase.storage.from('workhub-files').remove([storagePath]);
+  if (storageError) throw new Error('Unable to delete the file.');
+  const { error: documentError } = await supabase.from('documents').delete().eq('id', id);
+  if (documentError) throw new Error('Unable to delete document metadata.');
+  revalidatePath('/workspace');
+}
