@@ -43,7 +43,7 @@ export async function setTaskStatus(formData: FormData) {
   const status = String(formData.get('status') ?? 'todo');
   if (!id || !['todo', 'in_progress', 'done'].includes(status)) return;
   const { supabase } = await requireUser();
-  const { error } = await supabase.from('work_tasks').update({ status }).eq('id', id);
+  const { error } = status === 'done' ? await supabase.rpc('complete_task_and_schedule_next', { target_task_id: id }) : await supabase.from('work_tasks').update({ status, completed_at: null }).eq('id', id);
   if (error) throw new Error('작업 상태를 변경하지 못했습니다.');
   revalidatePath('/workspace');
 }
