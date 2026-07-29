@@ -1,0 +1,16 @@
+create table if not exists public.projects (id uuid primary key default gen_random_uuid(), organization_id uuid not null references public.organizations(id) on delete cascade, creator_id uuid not null references public.profiles(id), name text not null, description text not null default '', status text not null default 'active' check (status in ('planned','active','on_hold','completed','archived')), priority text not null default 'medium' check (priority in ('low','medium','high')), start_at date, due_at date, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+alter table public.work_tasks add column if not exists project_id uuid references public.projects(id) on delete set null;
+alter table public.work_tasks add column if not exists start_at date;
+alter table public.work_tasks add column if not exists labels text[] not null default '{}';
+alter table public.work_tasks add column if not exists recurrence text check (recurrence in ('daily','weekly','monthly'));
+alter table public.work_tasks add column if not exists archived_at timestamptz;
+create table if not exists public.task_comments (id uuid primary key default gen_random_uuid(), task_id uuid not null references public.work_tasks(id) on delete cascade, author_id uuid not null references public.profiles(id), body text not null, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+alter table public.projects enable row level security; alter table public.task_comments enable row level security;
+create policy "members read projects" on public.projects for select to authenticated using (public.is_organization_member(organization_id));
+create policy "members create projects" on public.projects for insert to authenticated with check (creator_id=auth.uid() and public.is_organization_member(organization_id));
+create policy "creators update projects" on public.projects for update to authenticated using (creator_id=auth.uid()) with check (creator_id=auth.uid());
+create policy "creators delete projects" on public.projects for delete to authenticated using (creator_id=auth.uid());
+create policy "members read task comments" on public.task_comments for select to authenticated using (exists(select 1 from public.work_tasks t where t.id=task_id and public.is_organization_member(t.organization_id)));
+create policy "members create task comments" on public.task_comments for insert to authenticated with check (author_id=auth.uid() and exists(select 1 from public.work_tasks t where t.id=task_id and public.is_organization_member(t.organization_id)));
+create policy "authors update task comments" on public.task_comments for update to authenticated using (author_id=auth.uid()) with check (author_id=auth.uid());
+create policy "authors delete task comments" on public.task_comments for delete to authenticated using (author_id=auth.uid());
