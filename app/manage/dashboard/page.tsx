@@ -23,7 +23,7 @@ export default async function AdminDashboardPage() {
 
   const cards = [
     ['구성원', members, '승인된 워크스페이스 구성원', '/manage/members'],
-    ['승인 대기', pending, '가입 승인을 기다리는 계정', '/manage/members'],
+    ['승인 대기', pending, '가입 승인을 기다리는 계정', '/manage/members/pending'],
     ['게시글', posts, '현재 공개된 게시글', '/manage/posts'],
     ['댓글', comments, '게시글에 작성된 댓글', '/manage/comments'],
     ['문서', documents, '공유된 워크스페이스 문서', '/documents'],
