@@ -33,3 +33,15 @@ export async function moveCategory(formData: FormData) {
   revalidatePath('/');
   revalidatePath('/posts');
 }
+
+export async function deleteTaxonomy(formData: FormData) {
+  const id = String(formData.get('id') ?? '');
+  const type = String(formData.get('type') ?? '');
+  if (!id || !['categories', 'tags'].includes(type)) return;
+  const { supabase, organizationId } = await adminContext();
+  const { error } = await supabase.rpc('admin_delete_taxonomy', { target_organization_id: organizationId, taxonomy_type: type, taxonomy_id: id });
+  if (error) throw new Error('Unable to delete item.');
+  revalidatePath('/manage/taxonomy');
+  revalidatePath('/');
+  revalidatePath('/posts');
+}
