@@ -35,5 +35,21 @@ export async function approveMember(formData: FormData) {
   const { error } = await supabase.from('organization_members').update({ status: 'approved', approved_by: user.id, approved_at: new Date().toISOString() }).eq('organization_id', organizationId).eq('user_id', userId);
   if (error) throw new Error('Unable to approve member.');
   revalidatePath('/manage/members');
+  revalidatePath('/manage/members/pending');
   revalidatePath('/workspace');
+}
+
+export async function rejectMember(formData: FormData) {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const userId = String(formData.get('userId') ?? '');
+  if (!organizationId || !userId) return;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { data: current } = await supabase.from('organization_members').select('role').eq('organization_id', organizationId).eq('user_id', user.id).maybeSingle();
+  if (!current || !['organization_admin', 'system_admin'].includes(current.role)) throw new Error('Administrator access required.');
+  const { error } = await supabase.from('organization_members').update({ status: 'suspended' }).eq('organization_id', organizationId).eq('user_id', userId).eq('status', 'pending');
+  if (error) throw new Error('Unable to reject member.');
+  revalidatePath('/manage/members');
+  revalidatePath('/manage/members/pending');
 }
