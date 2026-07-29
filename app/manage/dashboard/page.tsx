@@ -30,6 +30,16 @@ export default async function AdminDashboardPage() {
     ['업무', tasks, '등록된 업무 항목', '/tasks'],
   ];
   const sections = [
+    ['Notices', 'Create and publish workspace notices.', '/manage/notices'],
+    ['Advertisements', 'Manage advertisement campaigns and placement.', '/manage/ads'],
+    ['Analytics', 'Review workspace activity and trends.', '/manage/analytics'],
+    ['Audit log', 'Review administrative and system activity.', '/manage/audit'],
+    ['Banners', 'Create and publish announcement banners.', '/manage/banners'],
+    ['Comments', 'Review and moderate post comments.', '/manage/comments'],
+    ['Protected links', 'Create and manage protected access links.', '/manage/protected-links'],
+    ['Site settings', 'Manage site-wide workspace settings.', '/manage/site'],
+    ['Organization structure', 'Manage teams and organizational structure.', '/manage/structure'],
+    ['Categories and tags', 'Manage post categories and tags.', '/manage/taxonomy'],
     ['구성원·권한', '가입 승인과 역할을 관리합니다.', '/manage/members'],
     ['콘텐츠 관리', '게시글과 댓글을 검토합니다.', '/manage/posts'],
     ['공지·배너', '공지, 배너, 광고를 게시합니다.', '/manage/notices'],
