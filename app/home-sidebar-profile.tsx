@@ -31,11 +31,10 @@ export default function HomeSidebarProfile() {
 
   if (!profile) return null;
   const initial = profile.name.slice(0, 1).toUpperCase();
-  return <div style={{ margin: '12px 0 18px', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,.06)' }}>
+  return <Link href="/me" aria-label="Open my page" style={{ display: 'block', margin: '12px 0 18px', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,.06)', color: 'inherit', textDecoration: 'none' }}>
     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
       {profile.avatarUrl ? <img src={profile.avatarUrl} alt="" width={38} height={38} style={{ borderRadius: '50%', objectFit: 'cover' }} /> : <span className="avatar gradient">{initial}</span>}
       <div style={{ minWidth: 0 }}><strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.name}</strong><small>{roleLabel[profile.role] || profile.role}</small></div>
     </div>
-    <Link className="nav-item" href="/me" style={{ display: 'block', marginTop: '10px' }}>My page</Link>
-  </div>;
+  </Link>;
 }

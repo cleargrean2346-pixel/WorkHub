@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import HomeSidebarProfile from './home-sidebar-profile';
+import './home.css';
 
 const tasks = [
   ['디자인 페이지 최종 사용자 검토', 'High priority · Design system', '오늘, 11:00'],
@@ -27,7 +28,6 @@ export default function Home() {
     <aside className="sidebar">
       <a className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></a>
       <HomeSidebarProfile />
-      <div className="workspace"><span className="avatar gradient">J</span><div><strong>Jupiter Labs</strong><small>Enterprise plan</small></div></div>
       <nav aria-label="주 메뉴"><p className="nav-label">WORKSPACE</p><a className="nav-item active" href="#overview">Overview</a><a className="nav-item" href="#tasks">My tasks <b className="blue">7</b></a><a className="nav-item" href="#calendar">Calendar</a><p className="nav-label second">KNOWLEDGE</p><a className="nav-item" href="#documents">Documents</a><a className="nav-item" href="#members">Members</a></nav>
       <div className="sidebar-bottom">{email ? <><button className="upgrade" onClick={goToWorkspace}><div><strong>내 공간으로 이동</strong><small>{email}</small></div></button><button className="text-button" onClick={logout}>로그아웃</button></> : <button className="upgrade" onClick={goToWorkspace}><div><strong>로그인하고 시작</strong><small>Google 또는 이메일로 로그인</small></div></button>}</div>
     </aside>
