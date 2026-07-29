@@ -1,11 +1,34 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+
 type Post = { id: string; title: string; body: string; status: string; created_at: string; view_count: number; category_id: string | null; categories: { name: string } | { name: string }[] | null };
+
 export default async function PostsPage({ searchParams }: { searchParams: Promise<{ q?: string; category?: string; tag?: string; sort?: string }> }) {
-  const { q = '', category = '', tag = '', sort = 'latest' } = await searchParams; const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser(); const { data: membership } = user ? await supabase.from('organization_members').select('organization_id').eq('user_id',user.id).eq('status','approved').limit(1).maybeSingle() : { data:null };
+  const { q = '', category = '', tag = '', sort = 'latest' } = await searchParams;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: membership } = user ? await supabase.from('organization_members').select('organization_id').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle() : { data: null };
   if (membership) await supabase.rpc('publish_due_posts');
-  let categoryQuery = supabase.from('categories').select('id,name').order('name'); let tagQuery = supabase.from('tags').select('id,name').order('name'); if(membership) { categoryQuery=categoryQuery.eq('organization_id',membership.organization_id); tagQuery=tagQuery.eq('organization_id',membership.organization_id); } const {data:categories}=await categoryQuery; const {data:tags}=await tagQuery;
-  let query=supabase.from('posts').select('id,title,body,status,created_at,view_count,category_id,categories(name)'); if(membership) query=query.eq('organization_id',membership.organization_id); else query=query.eq('status','published'); if(category) query=query.eq('category_id',category); const {data:rows}=await query.order(sort==='views'?'view_count':'created_at',{ascending:false}); let posts=(rows??[]) as unknown as Post[];
-  if(tag) { const {data:tagged}=await supabase.from('post_tags').select('post_id').eq('tag_id',tag); const ids=new Set((tagged??[]).map((item)=>item.post_id)); posts=posts.filter((post)=>ids.has(post.id)); } const search=q.trim().toLowerCase(); if(search) posts=posts.filter((post)=>`${post.title} ${post.body}`.toLowerCase().includes(search));
-  return <main className="workspace-page"><header className="workspace-header"><Link className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></Link><div><strong>Knowledge</strong><small>{membership ? 'Organization posts' : 'Public posts'}</small></div><Link href={user ? '/workspace' : '/login'} className="back-link">{user ? 'Workspace' : 'Log in'}</Link></header><section className="workspace-content"><div className="workspace-intro"><p className="eyebrow"><span /> KNOWLEDGE</p><h1>Share what your team knows</h1>{membership ? <Link className="primary" href="/posts/new">Write post</Link> : <Link className="primary" href="/login">Log in to write</Link>}</div><section className="workspace-panel"><form className="task-form" action="/posts"><input name="q" defaultValue={q} placeholder="Search posts"/><select name="category" defaultValue={category}><option value="">All categories</option>{(categories??[]).map((item)=><option value={item.id} key={item.id}>{item.name}</option>)}</select><select name="tag" defaultValue={tag}><option value="">All tags</option>{(tags??[]).map((item)=><option value={item.id} key={item.id}>#{item.name}</option>)}</select><select name="sort" defaultValue={sort}><option value="latest">Latest</option><option value="views">Most viewed</option></select><button className="primary">Apply</button></form><div className="workspace-panel-title"><h2>Posts</h2><span>{posts.length}</span></div><div className="live-tasks">{posts.map((post)=>{ const categoryValue=Array.isArray(post.categories)?post.categories[0]:post.categories; return <Link className="live-task" href={`/posts/${post.id}`} key={post.id}><div><b>{post.title}</b><small>{categoryValue?.name || 'No category'} · {post.view_count} views · {new Date(post.created_at).toLocaleDateString('ko-KR')}</small></div></Link>; })}</div></section></section></main>;
+
+  let categoryQuery = supabase.from('categories').select('id,name').order('name');
+  let tagQuery = supabase.from('tags').select('id,name').order('name');
+  if (membership) { categoryQuery = categoryQuery.eq('organization_id', membership.organization_id); tagQuery = tagQuery.eq('organization_id', membership.organization_id); }
+  const [{ data: categories }, { data: tags }] = await Promise.all([categoryQuery, tagQuery]);
+  let query = supabase.from('posts').select('id,title,body,status,created_at,view_count,category_id,categories(name)');
+  query = membership ? query.eq('organization_id', membership.organization_id) : query.eq('status', 'published');
+  if (category) query = query.eq('category_id', category);
+  const { data: rows } = await query.order(sort === 'views' ? 'view_count' : 'created_at', { ascending: false });
+  let posts = (rows ?? []) as unknown as Post[];
+  if (tag) { const { data: tagged } = await supabase.from('post_tags').select('post_id').eq('tag_id', tag); const ids = new Set((tagged ?? []).map((item) => item.post_id)); posts = posts.filter((post) => ids.has(post.id)); }
+  const search = q.trim().toLowerCase();
+  if (search) posts = posts.filter((post) => `${post.title} ${post.body}`.toLowerCase().includes(search));
+
+  return <main className="workspace-page">
+    <header className="workspace-header"><Link className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></Link><div><strong>Knowledge</strong><small>{membership ? 'Organization posts' : 'Public posts'}</small></div><Link href={user ? '/workspace' : '/login'} className="back-link">{user ? 'Workspace' : 'Log in'}</Link></header>
+    <section className="workspace-content">
+      <div className="workspace-intro"><p className="eyebrow"><span /> KNOWLEDGE</p><h1>Share what your team knows</h1><p>Find announcements, guides, and decisions in one searchable place.</p>{membership ? <Link className="primary" href="/posts/new">Write post</Link> : <Link className="primary" href="/login">Log in to write</Link>}</div>
+      <section className="workspace-panel"><form className="task-form" action="/posts"><input name="q" defaultValue={q} placeholder="Search posts"/><select name="category" defaultValue={category}><option value="">All categories</option>{(categories ?? []).map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select><select name="tag" defaultValue={tag}><option value="">All tags</option>{(tags ?? []).map((item) => <option value={item.id} key={item.id}>#{item.name}</option>)}</select><select name="sort" defaultValue={sort}><option value="latest">Latest</option><option value="views">Most viewed</option></select><button className="primary">Apply</button></form></section>
+      <section className="workspace-panel"><div className="workspace-panel-title"><h2>Posts</h2><span>{posts.length}</span></div>{posts.length ? <div className="live-tasks">{posts.map((post) => { const categoryValue = Array.isArray(post.categories) ? post.categories[0] : post.categories; return <Link className="live-task" href={`/posts/${post.id}`} key={post.id}><div><b>{post.title}</b><small>{categoryValue?.name || 'No category'} · {post.view_count} views · {new Date(post.created_at).toLocaleDateString('ko-KR')}</small></div></Link>; })}</div> : <div className="empty-state">No posts match these filters.{membership ? ' Write the first post for your organization.' : ''}</div>}</section>
+    </section>
+  </main>;
 }
