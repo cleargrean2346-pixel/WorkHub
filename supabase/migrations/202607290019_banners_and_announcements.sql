@@ -1,0 +1,6 @@
+create table if not exists public.banners (id uuid primary key default gen_random_uuid(), organization_id uuid not null references public.organizations(id) on delete cascade, creator_id uuid not null references public.profiles(id), title text not null check (char_length(title) between 1 and 120), message text not null default '', link_url text, placement text not null default 'top' check (placement in ('top','sidebar','footer')), status text not null default 'draft' check (status in ('draft','published','archived')), starts_at timestamptz, ends_at timestamptz, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+alter table public.banners enable row level security;
+create policy "members read published banners" on public.banners for select to authenticated using (public.is_organization_member(organization_id));
+create policy "admins create banners" on public.banners for insert to authenticated with check (creator_id=auth.uid() and public.is_organization_admin(organization_id));
+create policy "admins update banners" on public.banners for update to authenticated using (public.is_organization_admin(organization_id)) with check (public.is_organization_admin(organization_id));
+create policy "admins delete banners" on public.banners for delete to authenticated using (public.is_organization_admin(organization_id));
