@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import './login.css';
 
-const NAVER_PROVIDER = process.env.NEXT_PUBLIC_NAVER_PROVIDER_ID || 'custom:naver';
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -92,7 +90,7 @@ export default function LoginPage() {
         <button type="button" className="oauth-button google-button" onClick={() => signInWithProvider('google', 'Google')} disabled={loading}>
           <span className="google-g">G</span> Google로 계속하기
         </button>
-        <button type="button" className="oauth-button naver-button" onClick={() => signInWithProvider(NAVER_PROVIDER, 'Naver')} disabled={loading}>
+        <button type="button" className="oauth-button naver-button" onClick={() => window.location.assign('/auth/naver')} disabled={loading}>
           <span className="naver-b">N</span> 네이버로 계속하기
         </button>
 
