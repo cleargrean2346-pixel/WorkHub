@@ -1,51 +1,7 @@
 'use client';
-
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import './login.css';
-
-export default function LoginPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [notice, setNotice] = useState('');
-
-  useEffect(() => {
-    createClient().auth.getUser().then(({ data: { user } }) => {
-      if (user) router.replace('/');
-    });
-  }, [router]);
-
-  const signInWithGoogle = async () => {
-    setLoading(true);
-    setNotice('');
-    const { data, error } = await createClient().auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${location.origin}/auth/callback`, skipBrowserRedirect: true },
-    });
-
-    if (error || !data.url) {
-      setNotice(error?.message || 'Google 로그인 주소를 만들지 못했습니다. Supabase의 Google 설정을 확인해 주세요.');
-      setLoading(false);
-      return;
-    }
-    window.location.assign(data.url);
-  };
-
-  return (
-    <main className="login-page">
-      <section className="login-card">
-        <Link className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></Link>
-        <p className="eyebrow"><span /> SECURE WORKSPACE</p>
-        <h1>WorkHub 로그인</h1>
-        <p className="login-copy">Google 계정으로 로그인하세요. 처음 로그인한 계정은 관리자의 승인 전까지 승인 대기 상태가 됩니다.</p>
-        <button type="button" className="oauth-button google-button" onClick={signInWithGoogle} disabled={loading}>
-          <span className="google-g">G</span> {loading ? 'Google로 연결 중…' : 'Google로 계속하기'}
-        </button>
-        {notice && <p className="login-notice" role="status">{notice}</p>}
-        <p className="login-footnote">계속 진행하면 WorkHub 이용약관과 개인정보 처리방침에 동의하게 됩니다.</p>
-      </section>
-    </main>
-  );
-}
+export default function LoginPage() { const router = useRouter(); const [loading, setLoading] = useState(false); const [notice, setNotice] = useState(''); useEffect(() => { createClient().auth.getUser().then(({ data: { user } }) => { if (user) router.replace('/'); }); }, [router]); const signInWithGoogle = async () => { setLoading(true); setNotice(''); const { data, error } = await createClient().auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${location.origin}/auth/callback`, skipBrowserRedirect: true } }); if (error || !data.url) { setNotice(error?.message || 'Google 로그인 주소를 만들지 못했습니다. Supabase의 Google 설정을 확인해 주세요.'); setLoading(false); return; } window.location.assign(data.url); }; return <main className="login-page"><section className="login-card"><Link className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></Link><p className="eyebrow"><span /> SECURE WORKSPACE</p><h1>WorkHub 로그인</h1><p className="login-copy">Google 계정으로 로그인하세요. 처음 로그인한 계정은 관리자 승인 전까지 승인 대기 상태가 됩니다.</p><button type="button" className="oauth-button google-button" onClick={signInWithGoogle} disabled={loading}><span className="google-g">G</span> {loading ? 'Google에 연결 중...' : 'Google로 계속하기'}</button>{notice && <p className="login-notice" role="status">{notice}</p>}<p className="login-footnote">계속 진행하면 WorkHub 이용약관과 개인정보 처리방침에 동의하게 됩니다.</p></section></main>; }
