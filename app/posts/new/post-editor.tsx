@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { summarizeText } from '@/app/ai/actions';
 import styles from './editor.module.css';
 
 type PostEditorProps = { organizationId: string; initialValue?: string };
@@ -32,6 +33,8 @@ export function PostEditor({ organizationId, initialValue = '' }: PostEditorProp
   const [altText, setAltText] = useState('이미지');
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
+  const [aiSummary, setAiSummary] = useState('');
+  const [aiPending, startAiTransition] = useTransition();
 
   function insert(before: string, after = '', fallback = '') {
     const textarea = textareaRef.current;
@@ -65,6 +68,15 @@ export function PostEditor({ organizationId, initialValue = '' }: PostEditorProp
     setUploading(false);
   }
 
+  function summarizeDraft() {
+    if (!value.trim()) { setMessage('먼저 본문 초안을 작성해 주세요.'); return; }
+    startAiTransition(async () => {
+      const data = new FormData(); data.set('content', value);
+      const result = await summarizeText(data);
+      if (result.ok) setAiSummary(result.text); else setMessage(result.text);
+    });
+  }
+
   return <div className={styles.editorBlock}>
     <div className={styles.toolbar} aria-label="본문 서식 도구">
       <button type="button" onClick={() => insert('**', '**', '강조할 텍스트')}>굵게</button>
@@ -73,6 +85,7 @@ export function PostEditor({ organizationId, initialValue = '' }: PostEditorProp
       <button type="button" onClick={() => insert('> ', '', '인용문')}>인용</button>
       <button type="button" onClick={() => insert('- [ ] ', '', '할 일')}>체크리스트</button>
       <button type="button" onClick={() => insert('## ', '', '소제목')}>소제목</button>
+      <button type="button" onClick={summarizeDraft} disabled={aiPending}>{aiPending ? 'AI 요약 중…' : 'AI 초안 요약'}</button>
     </div>
     <textarea ref={textareaRef} id="body" name="body" rows={16} value={value} onChange={(event) => setValue(event.target.value)} placeholder="Markdown으로 본문을 작성하세요." />
     <div className={styles.imageTools} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void uploadImage(event.dataTransfer.files[0]); }}>
@@ -81,6 +94,7 @@ export function PostEditor({ organizationId, initialValue = '' }: PostEditorProp
       <span>여기로 이미지를 끌어 놓을 수도 있습니다.</span>
     </div>
     {message && <p className={styles.editorMessage} role="status">{message}</p>}
+    {aiSummary && <div className={styles.aiSummary}><b>AI 초안 요약</b><p>{aiSummary}</p></div>}
     <details className={styles.preview}><summary>미리보기</summary><div dangerouslySetInnerHTML={{ __html: markdownPreview(value) }} /></details>
     {uploading && <p className={styles.editorMessage}>업로드 중…</p>}
   </div>;
