@@ -7,11 +7,11 @@ import { createClient } from '@/lib/supabase/client';
 type ProfileState = { name: string; role: string; avatarUrl: string | null } | null;
 
 const roleLabel: Record<string, string> = {
-  system_admin: 'System administrator',
-  organization_admin: 'Organization administrator',
-  manager: 'Manager',
-  team_leader: 'Team leader',
-  member: 'Member',
+  system_admin: '최고관리자',
+  organization_admin: '조직 관리자',
+  manager: '관리자',
+  team_leader: '팀 리더',
+  member: '구성원',
 };
 
 export default function HomeSidebarProfile() {
@@ -25,7 +25,7 @@ export default function HomeSidebarProfile() {
         supabase.from('profiles').select('full_name,avatar_url').eq('id', user.id).maybeSingle(),
         supabase.from('organization_members').select('role').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle(),
       ]);
-      setProfile({ name: details?.full_name || user.email?.split('@')[0] || 'Member', role: membership?.role || 'member', avatarUrl: details?.avatar_url || null });
+      setProfile({ name: details?.full_name || user.email?.split('@')[0] || '구성원', role: membership?.role || 'member', avatarUrl: details?.avatar_url || null });
     });
   }, []);
 
@@ -33,15 +33,15 @@ export default function HomeSidebarProfile() {
   const initial = profile.name.slice(0, 1).toUpperCase();
   const isAdmin = ['organization_admin', 'system_admin'].includes(profile.role);
   return <>
-    <Link href="/me" aria-label="Open my page" style={{ display: 'block', margin: '12px 0 10px', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,.06)', color: 'inherit', textDecoration: 'none' }}>
+    <Link href="/me" aria-label="마이페이지 열기" style={{ display: 'block', margin: '12px 0 10px', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,.06)', color: 'inherit', textDecoration: 'none' }}>
     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
       {profile.avatarUrl ? <img src={profile.avatarUrl} alt="" width={38} height={38} style={{ borderRadius: '50%', objectFit: 'cover' }} /> : <span className="avatar gradient">{initial}</span>}
       <div style={{ minWidth: 0 }}><strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.name}</strong><small>{roleLabel[profile.role] || profile.role}</small></div>
     </div>
     </Link>
     <div style={{ display: 'grid', gap: '8px', marginBottom: '18px' }}>
-      <Link href="/posts/new" style={{ display: 'block', padding: '10px 12px', borderRadius: '9px', background: '#536bf4', color: '#fff', textAlign: 'center', textDecoration: 'none', fontSize: '11px', fontWeight: 700 }}>Write post</Link>
-      {isAdmin && <Link href="/manage/dashboard" style={{ display: 'block', padding: '10px 12px', borderRadius: '9px', border: '1px solid #e1e4f7', color: '#536bf4', textAlign: 'center', textDecoration: 'none', fontSize: '11px', fontWeight: 700 }}>Admin page</Link>}
+      <Link href="/posts/new" style={{ display: 'block', padding: '10px 12px', borderRadius: '9px', background: '#536bf4', color: '#fff', textAlign: 'center', textDecoration: 'none', fontSize: '11px', fontWeight: 700 }}>게시글 작성</Link>
+      {isAdmin && <Link href="/manage/dashboard" style={{ display: 'block', padding: '10px 12px', borderRadius: '9px', border: '1px solid #e1e4f7', color: '#536bf4', textAlign: 'center', textDecoration: 'none', fontSize: '11px', fontWeight: 700 }}>관리자 페이지</Link>}
     </div>
   </>;
 }
