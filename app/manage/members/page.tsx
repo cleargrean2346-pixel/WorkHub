@@ -12,7 +12,7 @@ const roles = [
   ['manager', '매니저'], ['team_leader', '팀 리더'], ['member', '구성원'],
 ] as const;
 const roleLabels = Object.fromEntries(roles.map(([key, value]) => [key, value]));
-const statusLabels: Record<string, string> = { approved: '승인됨', pending: '승인 대기', suspended: '탈퇴 처리' };
+const statusLabels: Record<string, string> = { approved: '승인됨', pending: '승인 대기', suspended: '탈퇴 처리', unlisted: '승인 대기 등록 필요' };
 
 export default async function MembersPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
@@ -27,13 +27,22 @@ export default async function MembersPage({ searchParams }: { searchParams: Sear
     return <main className="onboarding"><section className="onboarding-card"><h1>관리자 권한이 필요합니다</h1><Link className="primary" href="/">홈으로</Link></section></main>;
   }
 
-  const { data: memberRows } = await supabase.from('organization_members').select('user_id,role,status').eq('organization_id', current.organization_id).order('joined_at');
-  const baseMembers = memberRows ?? [];
-  const { data: profileRows } = baseMembers.length
-    ? await supabase.from('profiles').select('id,full_name,email').in('id', baseMembers.map((member) => member.user_id))
-    : { data: [] as { id: string; full_name: string | null; email: string | null }[] };
-  const profiles = new Map((profileRows ?? []).map((profile) => [profile.id, profile]));
-  const members: Member[] = baseMembers.map((member) => ({ ...member, profiles: profiles.get(member.user_id) ?? null }));
+  const [{ data: memberRows }, { data: profileRows }] = await Promise.all([
+    supabase.from('organization_members').select('user_id,role,status').eq('organization_id', current.organization_id).order('joined_at'),
+    // Profiles are global authenticated accounts. Showing this list prevents
+    // already-created accounts from disappearing before their pending row exists.
+    supabase.from('profiles').select('id,full_name,email').order('created_at'),
+  ]);
+  const memberships = new Map((memberRows ?? []).map((member) => [member.user_id, member]));
+  const members: Member[] = (profileRows ?? []).map((profile) => {
+    const membership = memberships.get(profile.id);
+    return {
+      user_id: profile.id,
+      role: membership?.role ?? 'member',
+      status: membership?.status ?? 'unlisted',
+      profiles: { full_name: profile.full_name, email: profile.email },
+    };
+  });
   const counts = Object.fromEntries(roles.map(([role]) => [role, role === 'all' ? members.length : members.filter((member) => member.role === role).length]));
   const visible = members.filter((member) => {
     const text = `${member.profiles?.full_name ?? ''} ${member.profiles?.email ?? ''}`.toLowerCase();
@@ -60,7 +69,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Sear
             <span className={styles.avatar}>{name.slice(0, 1).toUpperCase()}</span><div className={styles.person}><b>{name}</b><small>{member.profiles?.email || '이메일 없음'} · {statusLabels[member.status] || member.status}</small></div>
             <span className={`${styles.badge} ${targetSystemAdmin ? styles.system : ''}`}>{roleLabels[member.role] || member.role}</span>
             <form action={changeMemberRole} className={styles.roleForm}><input type="hidden" name="organizationId" value={current.organization_id}/><input type="hidden" name="userId" value={member.user_id}/><select name="role" defaultValue={member.role} disabled={!canEdit} aria-label={`${name} 권한`}><option value="member">구성원</option><option value="team_leader">팀 리더</option><option value="manager">매니저</option><option value="organization_admin">조직 관리자</option>{maySetSystemAdmin && <option value="system_admin">최고관리자</option>}</select><button className="secondary" disabled={!canEdit}>권한 저장</button></form>
-            {canRemove ? <form action={removeMember}><input type="hidden" name="organizationId" value={current.organization_id}/><input type="hidden" name="userId" value={member.user_id}/><button className="secondary">탈퇴 처리</button></form> : <span className={styles.protected}>{member.status === 'pending' ? '승인 대기' : targetSystemAdmin ? '보호됨' : '탈퇴됨'}</span>}
+            {canRemove ? <form action={removeMember}><input type="hidden" name="organizationId" value={current.organization_id}/><input type="hidden" name="userId" value={member.user_id}/><button className="secondary">탈퇴 처리</button></form> : <span className={styles.protected}>{member.status === 'pending' ? '승인 대기' : member.status === 'unlisted' ? '자동 등록 대기' : targetSystemAdmin ? '보호됨' : '탈퇴됨'}</span>}
           </div>;
         })}</div> : <div className="empty-state">조건에 맞는 구성원이 없습니다.</div>}
       </section>
