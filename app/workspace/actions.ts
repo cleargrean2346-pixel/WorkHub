@@ -17,6 +17,15 @@ export async function createOrganization(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   if (!name) return;
   const { supabase, user } = await requireUser();
+  const { data: administrator } = await supabase
+    .from('organization_members')
+    .select('organization_id')
+    .eq('user_id', user.id)
+    .eq('status', 'approved')
+    .in('role', ['organization_admin', 'system_admin'])
+    .limit(1)
+    .maybeSingle();
+  if (!administrator) throw new Error('워크스페이스는 관리자 권한 이상만 만들 수 있습니다.');
   const { error } = await supabase.from('organizations').insert({
     name,
     slug: `${slugify(name) || 'workspace'}-${crypto.randomUUID().slice(0, 8)}`,
