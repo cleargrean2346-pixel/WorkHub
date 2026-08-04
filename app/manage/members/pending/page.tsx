@@ -10,7 +10,10 @@ export default async function PendingMembersPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-  const { data: current } = await supabase.from('organization_members').select('organization_id,role').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle();
+  const { data: primaryOrganization } = await supabase.from('organizations').select('id').order('created_at', { ascending: true }).order('id').limit(1).maybeSingle();
+  const { data: current } = primaryOrganization
+    ? await supabase.from('organization_members').select('organization_id,role').eq('organization_id', primaryOrganization.id).eq('user_id', user.id).eq('status', 'approved').maybeSingle()
+    : { data: null };
   if (!current || !['organization_admin', 'system_admin'].includes(current.role)) redirect('/workspace');
   const { data: rows } = await supabase.from('organization_members').select('user_id,invited_at').eq('organization_id', current.organization_id).eq('status', 'pending').order('invited_at', { ascending: false });
   const pendingMembers = (rows ?? []) as PendingMember[];

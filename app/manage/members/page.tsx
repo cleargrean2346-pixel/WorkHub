@@ -22,7 +22,12 @@ export default async function MembersPage({ searchParams }: { searchParams: Sear
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: current } = await supabase.from('organization_members').select('organization_id,role').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle();
+  // Administration is site-wide. Always use the original WorkHub organization
+  // instead of an arbitrary old workspace membership returned by the database.
+  const { data: primaryOrganization } = await supabase.from('organizations').select('id').order('created_at', { ascending: true }).order('id').limit(1).maybeSingle();
+  const { data: current } = primaryOrganization
+    ? await supabase.from('organization_members').select('organization_id,role').eq('organization_id', primaryOrganization.id).eq('user_id', user.id).eq('status', 'approved').maybeSingle()
+    : { data: null };
   if (!current || !['organization_admin', 'system_admin'].includes(current.role)) {
     return <main className="onboarding"><section className="onboarding-card"><h1>관리자 권한이 필요합니다</h1><Link className="primary" href="/">홈으로</Link></section></main>;
   }

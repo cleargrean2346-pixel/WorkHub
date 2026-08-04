@@ -7,7 +7,10 @@ export default async function AdminDashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-  const { data: membership } = await supabase.from('organization_members').select('organization_id,role').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle();
+  const { data: primaryOrganization } = await supabase.from('organizations').select('id').order('created_at', { ascending: true }).order('id').limit(1).maybeSingle();
+  const { data: membership } = primaryOrganization
+    ? await supabase.from('organization_members').select('organization_id,role').eq('organization_id', primaryOrganization.id).eq('user_id', user.id).eq('status', 'approved').maybeSingle()
+    : { data: null };
   if (!membership || !['organization_admin', 'system_admin'].includes(membership.role)) return <main className="onboarding"><section className="onboarding-card"><h1>관리자 권한이 필요합니다</h1><p>승인된 조직 관리자와 최고관리자만 접근할 수 있습니다.</p><Link className="primary" href="/">홈으로</Link></section></main>;
 
   const organizationId = membership.organization_id;
