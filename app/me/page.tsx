@@ -2,49 +2,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { createClient } from '@/lib/supabase/server';
-
 type Post = { id: string; title: string; status: string; created_at: string };
 type CommentRow = { id: string; body: string; created_at: string; posts: Post | Post[] | null };
-
-function linkedPost(value: Post | Post[] | null) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-export default async function MyPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const [{ data: profile }, { data: postRows }, { data: bookmarkRows }, { data: likeRows }, { data: commentRows }] = await Promise.all([
-    supabase.from('profiles').select('full_name, avatar_url, email').eq('id', user.id).maybeSingle(),
-    supabase.from('posts').select('id,title,status,created_at').eq('author_id', user.id).order('created_at', { ascending: false }).limit(20),
-    supabase.from('bookmarks').select('post_id, posts(id,title,status,created_at)').eq('user_id', user.id).limit(20),
-    supabase.from('likes').select('post_id, posts(id,title,status,created_at)').eq('user_id', user.id).limit(20),
-    supabase.from('comments').select('id,body,created_at,posts(id,title,status,created_at)').eq('author_id', user.id).order('created_at', { ascending: false }).limit(20),
-  ]);
-  const posts = (postRows ?? []) as Post[];
-  const bookmarks = (bookmarkRows ?? []).map((row) => linkedPost(row.posts as Post | Post[] | null)).filter(Boolean) as Post[];
-  const likes = (likeRows ?? []).map((row) => linkedPost(row.posts as Post | Post[] | null)).filter(Boolean) as Post[];
-  const comments = (commentRows ?? []) as unknown as CommentRow[];
-
-  return <main className="workspace-page">
-    <header className="workspace-header"><Link className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></Link><div><strong>마이페이지</strong><small>{profile?.email || user.email}</small></div><Link className="back-link" href="/workspace">내 공간</Link></header>
-    <section className="workspace-content">
-      <div className="workspace-intro"><p className="eyebrow"><span /> MY PAGE</p>{profile?.avatar_url && <img src={profile.avatar_url} alt="프로필" width={64} height={64} style={{ borderRadius: '50%', objectFit: 'cover' }} />}<h1>{profile?.full_name || '내 계정'}</h1><p>작성한 내용과 저장한 항목을 관리합니다.</p><div className="hero-actions"><Link className="primary" href="/settings/profile">프로필 편집</Link><Link className="secondary" href="/me/activity">전체 활동 기록</Link></div></div>
-      <section className="workspace-grid">
-        <Panel title="내 게시글" count={posts.length} empty="작성한 게시글이 없습니다.">{posts.map((post) => <PostLink key={post.id} post={post} />)}</Panel>
-        <Panel title="북마크" count={bookmarks.length} empty="저장한 게시글이 없습니다.">{bookmarks.map((post) => <PostLink key={post.id} post={post} />)}</Panel>
-        <Panel title="좋아요" count={likes.length} empty="좋아요를 누른 게시글이 없습니다.">{likes.map((post) => <PostLink key={post.id} post={post} />)}</Panel>
-        <Panel title="내 댓글" count={comments.length} empty="작성한 댓글이 없습니다.">{comments.map((comment) => { const post = linkedPost(comment.posts); return post ? <Link className="live-task" href={`/posts/${post.id}`} key={comment.id}><div><b>{post.title}</b><small>{comment.body.slice(0, 120)}</small><small>{new Date(comment.created_at).toLocaleDateString('ko-KR')}</small></div></Link> : null; })}</Panel>
-      </section>
-    </section>
-  </main>;
-}
-
-function PostLink({ post }: { post: Post }) {
-  return <Link className="live-task" href={`/posts/${post.id}`}><div><b>{post.title}</b><small>{post.status} · {new Date(post.created_at).toLocaleDateString('ko-KR')}</small></div></Link>;
-}
-
-function Panel({ title, count, empty, children }: { title: string; count: number; empty: string; children: ReactNode }) {
-  return <section className="workspace-panel"><div className="workspace-panel-title"><h2>{title}</h2><span>{count}</span></div>{count ? <div className="live-tasks">{children}</div> : <div className="empty-state">{empty}</div>}</section>;
-}
+function linkedPost(value: Post | Post[] | null) { return Array.isArray(value) ? value[0] : value; }
+export default async function MyPage() { const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) redirect('/login'); const [{ data: profile }, { data: postRows }, { data: bookmarkRows }, { data: likeRows }, { data: commentRows }] = await Promise.all([supabase.from('profiles').select('full_name,avatar_url,email').eq('id', user.id).maybeSingle(), supabase.from('posts').select('id,title,status,created_at').eq('author_id', user.id).order('created_at', { ascending: false }).limit(20), supabase.from('bookmarks').select('post_id,posts(id,title,status,created_at)').eq('user_id', user.id).limit(20), supabase.from('likes').select('post_id,posts(id,title,status,created_at)').eq('user_id', user.id).limit(20), supabase.from('comments').select('id,body,created_at,posts(id,title,status,created_at)').eq('author_id', user.id).order('created_at', { ascending: false }).limit(20)]); const posts = (postRows ?? []) as Post[]; const bookmarks = (bookmarkRows ?? []).map((row) => linkedPost(row.posts as Post | Post[] | null)).filter(Boolean) as Post[]; const likes = (likeRows ?? []).map((row) => linkedPost(row.posts as Post | Post[] | null)).filter(Boolean) as Post[]; const comments = (commentRows ?? []) as unknown as CommentRow[]; return <main className="workspace-page"><header className="workspace-header"><Link className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></Link><div><strong>마이페이지</strong><small>{profile?.email || user.email}</small></div><Link className="back-link" href="/workspace">내 공간</Link></header><section className="workspace-content"><div className="workspace-intro"><p className="eyebrow"><span /> MY PAGE</p>{profile?.avatar_url && <img src={profile.avatar_url} alt="프로필" width={64} height={64} style={{ borderRadius: '50%', objectFit: 'cover' }} />}<h1>{profile?.full_name || '내 계정'}</h1><p>작성한 내용과 저장한 항목을 관리합니다.</p><div className="hero-actions"><Link className="primary" href="/settings/profile">프로필 편집</Link><Link className="secondary" href="/me/activity">전체 활동 기록</Link><Link className="secondary" href="/settings/account">계정 관리</Link></div></div><section className="workspace-grid"><Panel title="내 게시글" count={posts.length} empty="작성한 게시글이 없습니다.">{posts.map((post) => <PostLink key={post.id} post={post} />)}</Panel><Panel title="북마크" count={bookmarks.length} empty="저장한 게시글이 없습니다.">{bookmarks.map((post) => <PostLink key={post.id} post={post} />)}</Panel><Panel title="좋아요" count={likes.length} empty="좋아요를 누른 게시글이 없습니다.">{likes.map((post) => <PostLink key={post.id} post={post} />)}</Panel><Panel title="내 댓글" count={comments.length} empty="작성한 댓글이 없습니다.">{comments.map((comment) => { const post = linkedPost(comment.posts); return post ? <Link className="live-task" href={`/posts/${post.id}`} key={comment.id}><div><b>{post.title}</b><small>{comment.body.slice(0, 120)}</small><small>{new Date(comment.created_at).toLocaleDateString('ko-KR')}</small></div></Link> : null; })}</Panel></section></section></main>; }
+function PostLink({ post }: { post: Post }) { return <Link className="live-task" href={`/posts/${post.id}`}><div><b>{post.title}</b><small>{post.status} · {new Date(post.created_at).toLocaleDateString('ko-KR')}</small></div></Link>; }
+function Panel({ title, count, empty, children }: { title: string; count: number; empty: string; children: ReactNode }) { return <section className="workspace-panel"><div className="workspace-panel-title"><h2>{title}</h2><span>{count}</span></div>{count ? <div className="live-tasks">{children}</div> : <div className="empty-state">{empty}</div>}</section>; }
