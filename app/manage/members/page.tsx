@@ -1,22 +1,18 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { approveMember, changeMemberRole } from './actions';
+import { changeMemberRole, removeMember } from './actions';
 import styles from './members.module.css';
 
-type Member = { user_id: string; role: string; status: string; profiles: { full_name: string | null; email: string | null } | { full_name: string | null; email: string | null }[] | null };
 type SearchParams = Promise<{ q?: string; role?: string }>;
+type Member = { user_id: string; role: string; status: string; profiles: { full_name: string | null; email: string | null } | null };
 
 const roles = [
-  ['all', '전체'],
-  ['system_admin', '최고관리자'],
-  ['organization_admin', '조직 관리자'],
-  ['manager', '매니저'],
-  ['team_leader', '팀 리더'],
-  ['member', '구성원'],
+  ['all', '전체'], ['system_admin', '최고관리자'], ['organization_admin', '조직 관리자'],
+  ['manager', '매니저'], ['team_leader', '팀 리더'], ['member', '구성원'],
 ] as const;
-
-const roleLabels: Record<string, string> = Object.fromEntries(roles.map(([value, label]) => [value, label]));
+const roleLabels = Object.fromEntries(roles.map(([key, value]) => [key, value]));
+const statusLabels: Record<string, string> = { approved: '승인됨', pending: '승인 대기', suspended: '탈퇴 처리' };
 
 export default async function MembersPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
@@ -25,31 +21,49 @@ export default async function MembersPage({ searchParams }: { searchParams: Sear
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-  const { data: current } = await supabase.from('organization_members').select('organization_id,role').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle();
-  if (!current || !['organization_admin', 'system_admin'].includes(current.role)) return <main className="onboarding"><section className="onboarding-card"><h1>관리자 권한이 필요합니다</h1><Link className="primary" href="/workspace">내 공간으로</Link></section></main>;
 
-  const { data: memberRows } = await supabase.from('organization_members').select('user_id,role,status').eq('organization_id', current.organization_id).eq('status', 'approved').order('joined_at');
-  const baseMembers = memberRows?.length ? memberRows : [{ user_id: user.id, role: current.role, status: 'approved' }];
-  const { data: profileRows } = await supabase.from('profiles').select('id,full_name,email').in('id', baseMembers.map((member) => member.user_id));
-  const profilesById = new Map((profileRows ?? []).map((profile) => [profile.id, { full_name: profile.full_name, email: profile.email }]));
-  const members = baseMembers.map((member) => ({ ...member, profiles: profilesById.get(member.user_id) ?? null })) as Member[];
-  const countByRole = Object.fromEntries(roles.map(([role]) => [role, role === 'all' ? members.length : members.filter((member) => member.role === role).length]));
-  const visibleMembers = members.filter((member) => {
-    const profile = Array.isArray(member.profiles) ? member.profiles[0] : member.profiles;
-    const matchesRole = selectedRole === 'all' || member.role === selectedRole;
-    const haystack = `${profile?.full_name ?? ''} ${profile?.email ?? ''}`.toLowerCase();
-    return matchesRole && (!query || haystack.includes(query));
+  const { data: current } = await supabase.from('organization_members').select('organization_id,role').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle();
+  if (!current || !['organization_admin', 'system_admin'].includes(current.role)) {
+    return <main className="onboarding"><section className="onboarding-card"><h1>관리자 권한이 필요합니다</h1><Link className="primary" href="/">홈으로</Link></section></main>;
+  }
+
+  const { data: memberRows } = await supabase.from('organization_members').select('user_id,role,status').eq('organization_id', current.organization_id).order('joined_at');
+  const baseMembers = memberRows ?? [];
+  const { data: profileRows } = baseMembers.length
+    ? await supabase.from('profiles').select('id,full_name,email').in('id', baseMembers.map((member) => member.user_id))
+    : { data: [] as { id: string; full_name: string | null; email: string | null }[] };
+  const profiles = new Map((profileRows ?? []).map((profile) => [profile.id, profile]));
+  const members: Member[] = baseMembers.map((member) => ({ ...member, profiles: profiles.get(member.user_id) ?? null }));
+  const counts = Object.fromEntries(roles.map(([role]) => [role, role === 'all' ? members.length : members.filter((member) => member.role === role).length]));
+  const visible = members.filter((member) => {
+    const text = `${member.profiles?.full_name ?? ''} ${member.profiles?.email ?? ''}`.toLowerCase();
+    return (selectedRole === 'all' || member.role === selectedRole) && (!query || text.includes(query));
   });
 
   return <main className="workspace-page">
-    <header className="workspace-header"><Link className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></Link><div><strong>구성원 관리</strong><small>{members.length}명의 워크스페이스 구성원</small></div><Link className="back-link" href="/manage/dashboard">관리자 페이지</Link></header>
+    <header className="workspace-header"><Link className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></Link><div><strong>구성원 관리</strong><small>모든 구성원 {members.length}명</small></div><Link className="back-link" href="/manage/dashboard">관리자 페이지</Link></header>
     <section className={`workspace-content ${styles.membersPage}`}>
-      <div className="workspace-intro"><p className="eyebrow"><span /> ADMIN</p><h1>구성원과 권한 관리</h1><p>이름 또는 이메일로 찾고, 역할별로 나누어 권한을 부여하거나 변경할 수 있습니다.</p></div>
+      <div className="workspace-intro"><p className="eyebrow"><span /> ADMIN</p><h1>구성원과 권한 관리</h1><p>승인 대기 구성원은 대시보드의 승인 대기에서 처리합니다. 이 화면에서는 모든 구성원의 상태와 권한을 확인할 수 있습니다.</p></div>
       <section className={`workspace-panel ${styles.filters}`}>
         <form action="/manage/members" className={styles.search}><input name="q" defaultValue={params.q ?? ''} placeholder="이름 또는 이메일 검색" aria-label="구성원 검색" /><input type="hidden" name="role" value={selectedRole} /><button className="primary">검색</button>{query && <Link className="secondary" href={`/manage/members?role=${selectedRole}`}>초기화</Link>}</form>
-        <nav className={styles.roleTabs} aria-label="권한별 구성원"><Link href="/manage/members" className={selectedRole === 'all' ? styles.active : ''}>전체 <b>{countByRole.all}</b></Link>{roles.slice(1).map(([role, label]) => <Link href={`/manage/members?role=${role}${query ? `&q=${encodeURIComponent(params.q ?? '')}` : ''}`} className={selectedRole === role ? styles.active : ''} key={role}>{label} <b>{countByRole[role]}</b></Link>)}</nav>
+        <nav className={styles.roleTabs} aria-label="권한별 구성원">{roles.map(([role, label]) => <Link key={role} href={`/manage/members?role=${role}${query ? `&q=${encodeURIComponent(params.q ?? '')}` : ''}`} className={selectedRole === role ? styles.active : ''}>{label} <b>{counts[role]}</b></Link>)}</nav>
       </section>
-      <section className="workspace-panel"><div className="workspace-panel-title"><div><h2>구성원 목록</h2><p className={styles.helper}>{visibleMembers.length}명 표시 · 최고관리자는 강등 또는 변경할 수 없습니다.</p></div><span>{selectedRole === 'all' ? '전체' : roleLabels[selectedRole]}</span></div>{visibleMembers.length ? <div className={styles.memberList}>{visibleMembers.map((member) => { const profile = Array.isArray(member.profiles) ? member.profiles[0] : member.profiles; const locked = member.role === 'system_admin'; const pending = member.status === 'pending'; const name = profile?.full_name || profile?.email || '이름 없는 구성원'; return <form className={styles.memberRow} action={pending ? approveMember : changeMemberRole} key={member.user_id}><input type="hidden" name="organizationId" value={current.organization_id}/><input type="hidden" name="userId" value={member.user_id}/><span className={styles.avatar}>{name.slice(0, 1).toUpperCase()}</span><div className={styles.person}><b>{name}</b><small>{profile?.email || '이메일 없음'} · {member.status === 'approved' ? '승인됨' : pending ? '승인 대기' : '정지됨'}</small></div><span className={`${styles.badge} ${locked ? styles.system : ''}`}>{roleLabels[member.role] || member.role}</span><select name="role" defaultValue={member.role} disabled={member.status !== 'approved' || locked} aria-label={`${name}의 역할`}><option value="member">구성원</option><option value="team_leader">팀 리더</option><option value="manager">매니저</option><option value="organization_admin">조직 관리자</option></select><button className="secondary" disabled={locked || member.status === 'suspended'}>{locked ? '보호됨' : pending ? '승인하기' : '권한 저장'}</button></form>; })}</div> : <div className="empty-state">조건에 맞는 구성원이 없습니다.</div>}</section>
+      <section className="workspace-panel"><div className="workspace-panel-title"><div><h2>구성원 목록</h2><p className={styles.helper}>최고관리자 임명은 최고관리자만 할 수 있고, 최고관리자는 본인만 강등할 수 있습니다.</p></div><Link className="secondary" href="/manage/members/pending">승인 대기 관리</Link></div>
+        {visible.length ? <div className={styles.memberList}>{visible.map((member) => {
+          const name = member.profiles?.full_name || member.profiles?.email || '이름 없는 구성원';
+          const approved = member.status === 'approved';
+          const targetSystemAdmin = member.role === 'system_admin';
+          const maySetSystemAdmin = current.role === 'system_admin';
+          const canEdit = approved && (!targetSystemAdmin || member.user_id === user.id);
+          const canRemove = approved && !targetSystemAdmin;
+          return <div className={styles.memberRow} key={member.user_id}>
+            <span className={styles.avatar}>{name.slice(0, 1).toUpperCase()}</span><div className={styles.person}><b>{name}</b><small>{member.profiles?.email || '이메일 없음'} · {statusLabels[member.status] || member.status}</small></div>
+            <span className={`${styles.badge} ${targetSystemAdmin ? styles.system : ''}`}>{roleLabels[member.role] || member.role}</span>
+            <form action={changeMemberRole} className={styles.roleForm}><input type="hidden" name="organizationId" value={current.organization_id}/><input type="hidden" name="userId" value={member.user_id}/><select name="role" defaultValue={member.role} disabled={!canEdit} aria-label={`${name} 권한`}><option value="member">구성원</option><option value="team_leader">팀 리더</option><option value="manager">매니저</option><option value="organization_admin">조직 관리자</option>{maySetSystemAdmin && <option value="system_admin">최고관리자</option>}</select><button className="secondary" disabled={!canEdit}>권한 저장</button></form>
+            {canRemove ? <form action={removeMember}><input type="hidden" name="organizationId" value={current.organization_id}/><input type="hidden" name="userId" value={member.user_id}/><button className="secondary">탈퇴 처리</button></form> : <span className={styles.protected}>{member.status === 'pending' ? '승인 대기' : targetSystemAdmin ? '보호됨' : '탈퇴됨'}</span>}
+          </div>;
+        })}</div> : <div className="empty-state">조건에 맞는 구성원이 없습니다.</div>}
+      </section>
     </section>
   </main>;
 }
