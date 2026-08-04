@@ -63,7 +63,9 @@ export default async function MembersPage({ searchParams }: { searchParams: Sear
           const approved = member.status === 'approved';
           const targetSystemAdmin = member.role === 'system_admin';
           const maySetSystemAdmin = current.role === 'system_admin';
-          const canEdit = approved && (!targetSystemAdmin || member.user_id === user.id);
+          // System administrator status is protected by the database as well.
+          // The UI never offers a demotion control for a protected account.
+          const canEdit = approved && !targetSystemAdmin;
           const canRemove = approved && !targetSystemAdmin;
           return <div className={styles.memberRow} key={member.user_id}>
             <span className={styles.avatar}>{name.slice(0, 1).toUpperCase()}</span><div className={styles.person}><b>{name}</b><small>{member.profiles?.email || '이메일 없음'} · {statusLabels[member.status] || member.status}</small></div>
