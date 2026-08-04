@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { renderPostMarkdown } from '@/lib/markdown';
@@ -6,6 +7,15 @@ import { addComment, deleteComment, deletePost, toggleBookmark, toggleLike, upda
 import styles from './detail.module.css';
 
 type Comment = { id: string; parent_id: string | null; body: string; author_id: string; created_at: string; updated_at: string | null };
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: post } = await supabase.from('posts').select('title,excerpt,body,cover_image_url,status').eq('id', id).maybeSingle();
+  if (!post || post.status !== 'published') return { title: '게시글을 찾을 수 없습니다.' };
+  const description = post.excerpt || post.body.slice(0, 160) || 'WorkHub 게시글';
+  return { title: post.title, description, openGraph: { title: post.title, description, type: 'article', images: post.cover_image_url ? [{ url: post.cover_image_url }] : [] } };
+}
 
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
