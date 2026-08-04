@@ -60,17 +60,16 @@ export default async function MembersPage({ searchParams }: { searchParams: Sear
       <section className="workspace-panel"><div className="workspace-panel-title"><div><h2>구성원 목록</h2><p className={styles.helper}>최고관리자 임명은 최고관리자만 할 수 있고, 최고관리자는 본인만 강등할 수 있습니다.</p></div><Link className="secondary" href="/manage/members/pending">승인 대기 관리</Link></div>
         {visible.length ? <div className={styles.memberList}>{visible.map((member) => {
           const name = member.profiles?.full_name || member.profiles?.email || '이름 없는 구성원';
-          const approved = member.status === 'approved';
           const targetSystemAdmin = member.role === 'system_admin';
           const maySetSystemAdmin = current.role === 'system_admin';
           // System administrator status is protected by the database as well.
           // The UI never offers a demotion control for a protected account.
-          const canEdit = approved && !targetSystemAdmin;
-          const canRemove = approved && !targetSystemAdmin;
+          const canEdit = member.status !== 'pending' && member.status !== 'unlisted' && !targetSystemAdmin;
+          const canRemove = member.status === 'approved' && !targetSystemAdmin;
           return <div className={styles.memberRow} key={member.user_id}>
             <span className={styles.avatar}>{name.slice(0, 1).toUpperCase()}</span><div className={styles.person}><b>{name}</b><small>{member.profiles?.email || '이메일 없음'} · {statusLabels[member.status] || member.status}</small></div>
             <span className={`${styles.badge} ${targetSystemAdmin ? styles.system : ''}`}>{roleLabels[member.role] || member.role}</span>
-            <form action={changeMemberRole} className={styles.roleForm}><input type="hidden" name="organizationId" value={current.organization_id}/><input type="hidden" name="userId" value={member.user_id}/><select name="role" defaultValue={member.role} disabled={!canEdit} aria-label={`${name} 권한`}><option value="member">구성원</option><option value="team_leader">팀 리더</option><option value="manager">매니저</option><option value="organization_admin">조직 관리자</option>{maySetSystemAdmin && <option value="system_admin">최고관리자</option>}</select><button className="secondary" disabled={!canEdit}>권한 저장</button></form>
+            <form action={changeMemberRole} className={styles.roleForm}><input type="hidden" name="organizationId" value={current.organization_id}/><input type="hidden" name="userId" value={member.user_id}/><select name="role" defaultValue={member.role} disabled={!canEdit} aria-label={`${name} 권한`}><option value="member">구성원</option><option value="team_leader">팀 리더</option><option value="manager">매니저</option><option value="organization_admin">조직 관리자</option>{maySetSystemAdmin && <option value="system_admin">최고관리자</option>}</select><button className="secondary" disabled={!canEdit}>{member.status === 'suspended' ? '복구 및 권한 저장' : '권한 저장'}</button></form>
             {canRemove ? <form action={removeMember}><input type="hidden" name="organizationId" value={current.organization_id}/><input type="hidden" name="userId" value={member.user_id}/><button className="secondary">탈퇴 처리</button></form> : <span className={styles.protected}>{member.status === 'pending' ? '승인 대기' : member.status === 'unlisted' ? '자동 등록 대기' : targetSystemAdmin ? '보호됨' : '탈퇴됨'}</span>}
           </div>;
         })}</div> : <div className="empty-state">조건에 맞는 구성원이 없습니다.</div>}
