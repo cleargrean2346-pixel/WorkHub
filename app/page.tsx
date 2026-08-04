@@ -7,7 +7,7 @@ import HomeSidebarCategories from './home-sidebar-categories';
 import ThemeToggle from './theme-toggle';
 import './home.css';
 
-const tasks = [
+const fallbackTasks = [
   ['Finalize user page review', 'High priority · Design system', 'Today, 11:00'],
   ['Prepare Q3 marketing brief', 'Medium priority · Marketing', 'Today, 14:00'],
   ['Update onboarding guide', 'Low priority · People', 'Today, 17:00'],
@@ -15,11 +15,20 @@ const tasks = [
 
 export default function Home() {
   const [completed, setCompleted] = useState<number[]>([]);
+  const [tasks, setTasks] = useState<string[][]>(fallbackTasks);
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const client = createClient();
-    client.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+    client.auth.getUser().then(async ({ data }) => {
+      const user = data.user;
+      setEmail(user?.email ?? null);
+      if (!user) return;
+      const { data: membership } = await client.from('organization_members').select('organization_id').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle();
+      if (!membership) return;
+      const { data: rows } = await client.from('work_tasks').select('title,priority,status,due_at').eq('organization_id', membership.organization_id).is('archived_at', null).neq('status', 'done').order('due_at', { ascending: true, nullsFirst: false }).limit(6);
+      if (rows?.length) setTasks(rows.map((task) => [task.title, `${task.priority} priority · ${task.status}`, task.due_at ? new Date(task.due_at).toLocaleDateString('ko-KR') : 'No deadline']));
+    });
   }, []);
 
   const goToWorkspace = () => { window.location.href = email ? '/workspace' : '/login'; };
@@ -35,11 +44,15 @@ export default function Home() {
         <a className="nav-item active" href="#overview">Overview</a>
         <a className="nav-item" href="#tasks">My tasks <b className="blue">{tasks.length}</b></a>
         <a className="nav-item" href="#calendar">Calendar</a>
+        <a className="nav-item" href="/tasks">Tasks</a>
+        <a className="nav-item" href="/requests">Requests</a>
+        <a className="nav-item" href="/notifications">Notifications</a>
         <HomeSidebarCategories />
         <p className="nav-label second">KNOWLEDGE</p>
         <a className="nav-item" href="/posts">Posts</a>
         <a className="nav-item" href="/search">Search</a>
         <a className="nav-item" href="/documents">Documents</a>
+        <a className="nav-item" href="/ai">AI tools</a>
       </nav>
       <div className="sidebar-bottom">{email ? <><button className="upgrade" onClick={goToWorkspace}><div><strong>Open my workspace</strong><small>{email}</small></div></button><button className="text-button" onClick={logout}>Log out</button></> : <button className="upgrade" onClick={goToWorkspace}><div><strong>Log in to get started</strong><small>Use Google or email</small></div></button>}</div>
     </aside>
