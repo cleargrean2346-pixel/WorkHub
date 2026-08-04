@@ -44,6 +44,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const orderedComments = rootComments.flatMap((item) => [item, ...commentRows.filter((reply) => reply.parent_id === item.id)]);
   const likeCount = likes?.length ?? 0;
   const tags = (tagRows ?? []).map((row: any) => Array.isArray(row.tags) ? row.tags[0] : row.tags).filter(Boolean) as Array<{ id: string; name: string }>;
+  const { data: relatedRows } = post.category_id ? await supabase.from('posts').select('id,title,excerpt,created_at').eq('category_id', post.category_id).eq('status', 'published').neq('id', post.id).order('created_at', { ascending: false }).limit(4) : { data: [] };
 
   return (
     <main className="workspace-page">
@@ -100,6 +101,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             ))}</div> : <div className="empty-state">아직 댓글이 없습니다.</div>}
           </section>
         ) : <section className="workspace-panel"><p>이 게시글은 댓글이 비활성화되어 있습니다.</p></section>}
+        {relatedRows?.length ? <section className={`workspace-panel ${styles.related}`}><div className="workspace-panel-title"><h2>Related posts</h2><Link href={`/posts?category=${post.category_id}`}>More</Link></div><div className="live-tasks">{relatedRows.map((item) => <Link className="live-task" href={`/posts/${item.id}`} key={item.id}><div><b>{item.title}</b><small>{item.excerpt || new Date(item.created_at).toLocaleDateString('ko-KR')}</small></div></Link>)}</div></section> : null}
       </section>
     </main>
   );
