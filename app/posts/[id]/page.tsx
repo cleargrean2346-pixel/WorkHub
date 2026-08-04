@@ -30,18 +30,20 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   if (!post || (!user && post.status !== 'published')) notFound();
   await supabase.rpc('increment_post_views', { target_post_id: post.id });
 
-  const [{ data: likes }, { data: bookmark }, { data: comments }] = await Promise.all([
+  const [{ data: likes }, { data: bookmark }, { data: comments }, { data: tagRows }] = await Promise.all([
     user ? supabase.from('likes').select('user_id').eq('post_id', post.id) : Promise.resolve({ data: [] }),
     user ? supabase.from('bookmarks').select('post_id').eq('post_id', post.id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
     post.comments_enabled
       ? supabase.from('comments').select('id,parent_id,body,author_id,created_at,updated_at').eq('post_id', post.id).order('created_at')
       : Promise.resolve({ data: [] }),
+    supabase.from('post_tags').select('tag_id,tags(id,name)').eq('post_id', post.id),
   ]);
   const category = Array.isArray(post.categories) ? post.categories[0] : post.categories;
   const commentRows = (comments ?? []) as Comment[];
   const rootComments = commentRows.filter((item) => !item.parent_id);
   const orderedComments = rootComments.flatMap((item) => [item, ...commentRows.filter((reply) => reply.parent_id === item.id)]);
   const likeCount = likes?.length ?? 0;
+  const tags = (tagRows ?? []).map((row: any) => Array.isArray(row.tags) ? row.tags[0] : row.tags).filter(Boolean) as Array<{ id: string; name: string }>;
 
   return (
     <main className="workspace-page">
@@ -61,6 +63,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             {post.last_edited_at && <span>수정 {new Date(post.last_edited_at).toLocaleDateString('ko-KR')}</span>}
             <span>조회 {post.view_count}</span>
           </div>
+          {tags.length > 0 && <div className={styles.tagList}>{tags.map((tag) => <Link key={tag.id} href={`/posts?tag=${tag.id}`}>#{tag.name}</Link>)}</div>}
           {post.cover_image_url && <img className={styles.cover} src={post.cover_image_url} alt="게시글 대표 이미지" />}
           <div className={styles.body} dangerouslySetInnerHTML={{ __html: renderPostMarkdown(post.body || '내용이 아직 없습니다.') }} />
 
