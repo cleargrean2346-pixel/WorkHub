@@ -1,28 +1,15 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { createWorkRequest, decideWorkRequest } from './actions';
+import { cancelWorkRequest, createWorkRequest, decideWorkRequest, startWorkRequestReview } from './actions';
 
-type WorkRequest = { id: string; title: string; body: string; status: string; decision_note: string | null; created_at: string };
+type WorkRequest = { id: string; requester_id: string; title: string; body: string; status: string; decision_note: string | null; created_at: string };
 
 export default async function RequestsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) redirect('/login');
   const { data: membership } = await supabase.from('organization_members').select('organization_id,role').eq('user_id', user.id).eq('status', 'approved').limit(1).maybeSingle();
-  if (!membership) return <main className="onboarding"><section className="onboarding-card"><h1>Join a workspace first</h1><Link className="primary" href="/workspace">Open workspace</Link></section></main>;
-  const { data: rows } = await supabase.from('work_requests').select('id,title,body,status,decision_note,created_at').eq('organization_id', membership.organization_id).order('created_at', { ascending: false });
-  const requests = (rows ?? []) as WorkRequest[];
-  const isAdmin = ['organization_admin', 'system_admin'].includes(membership.role);
-  const pending = requests.filter((item) => ['submitted', 'under_review'].includes(item.status)).length;
-  return <main className="workspace-page">
-    <header className="workspace-header"><Link className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></Link><div><strong>Requests</strong><small>{pending} awaiting decision</small></div><Link className="back-link" href="/workspace">Workspace</Link></header>
-    <section className="workspace-content">
-      <div className="workspace-intro"><p className="eyebrow"><span /> REQUESTS</p><h1>Request and approve work</h1><p>Submit a request and follow its decision here.</p></div>
-      <div className="workspace-grid">
-        <section className="workspace-panel"><h2>New request</h2><form className="task-form" action={createWorkRequest}><label htmlFor="title">Request title</label><input id="title" name="title" required maxLength={200} placeholder="Example: Purchase approval"/><label htmlFor="body">Details</label><textarea id="body" name="body" rows={6} placeholder="Explain the request and context"/><button className="primary">Submit request</button></form></section>
-        <section className="workspace-panel"><div className="workspace-panel-title"><h2>Request list</h2><span>{requests.length}</span></div>{requests.length ? <div className="live-tasks">{requests.map((request) => <article className="live-task" key={request.id}><div><b>{request.title}</b><small>{request.status} · {new Date(request.created_at).toLocaleDateString('ko-KR')}</small><p>{request.body || 'No details provided.'}</p>{request.decision_note && <small>Decision note: {request.decision_note}</small>}</div>{isAdmin && ['submitted', 'under_review'].includes(request.status) && <form className="task-form" action={decideWorkRequest}><input type="hidden" name="id" value={request.id}/><input name="decisionNote" placeholder="Optional decision note"/><div className="hero-actions"><button className="primary" name="status" value="approved">Approve</button><button className="secondary" name="status" value="rejected">Reject</button></div></form>}</article>)}</div> : <div className="empty-state">No requests yet. Submit the first request above.</div>}</section>
-      </div>
-    </section>
-  </main>;
+  if (!membership) return <main className="onboarding"><section className="onboarding-card"><h1>워크스페이스 가입이 필요합니다.</h1><Link className="primary" href="/workspace">내 공간</Link></section></main>;
+  const { data: rows } = await supabase.from('work_requests').select('id,requester_id,title,body,status,decision_note,created_at').eq('organization_id', membership.organization_id).order('created_at', { ascending: false });
+  const requests = (rows ?? []) as WorkRequest[]; const isAdmin = ['organization_admin', 'system_admin'].includes(membership.role); const pending = requests.filter((item) => ['submitted', 'under_review'].includes(item.status)).length;
+  return <main className="workspace-page"><header className="workspace-header"><Link className="brand" href="/"><span className="brand-mark">W</span><span>workhub</span></Link><div><strong>업무 요청</strong><small>처리 대기 {pending}건</small></div><Link className="back-link" href="/workspace">내 공간</Link></header><section className="workspace-content"><div className="workspace-intro"><p className="eyebrow"><span /> REQUESTS</p><h1>요청부터 결정까지 한곳에서 관리하세요.</h1><p>제출 → 검토 중 → 승인 또는 반려 흐름을 확인할 수 있습니다.</p></div><div className="workspace-grid"><section className="workspace-panel"><h2>새 요청</h2><form className="task-form" action={createWorkRequest}><label>요청 제목<input name="title" required maxLength={200} placeholder="예: 구매 승인" /></label><label>상세 내용<textarea name="body" rows={6} placeholder="요청 배경과 필요한 내용을 작성하세요." /></label><button className="primary">요청 제출</button></form></section><section className="workspace-panel"><div className="workspace-panel-title"><h2>요청 목록</h2><span>{requests.length}</span></div>{requests.length ? <div className="live-tasks">{requests.map((request) => <article className="live-task" key={request.id}><div><b>{request.title}</b><small>{request.status} · {new Date(request.created_at).toLocaleDateString('ko-KR')}</small><p>{request.body || '상세 내용 없음'}</p>{request.decision_note && <small>결정 메모: {request.decision_note}</small>}</div><div className="hero-actions">{request.requester_id === user.id && ['submitted', 'under_review'].includes(request.status) && <form action={cancelWorkRequest}><input type="hidden" name="id" value={request.id} /><button className="secondary">요청 취소</button></form>}{isAdmin && request.status === 'submitted' && <form action={startWorkRequestReview}><input type="hidden" name="id" value={request.id} /><button className="secondary">검토 시작</button></form>}{isAdmin && ['submitted', 'under_review'].includes(request.status) && <form className="task-form" action={decideWorkRequest}><input type="hidden" name="id" value={request.id} /><input name="decisionNote" placeholder="결정 메모" /><button className="primary" name="status" value="approved">승인</button><button className="secondary" name="status" value="rejected">반려</button></form>}</div></article>)}</div> : <div className="empty-state">아직 요청이 없습니다.</div>}</section></div></section></main>;
 }

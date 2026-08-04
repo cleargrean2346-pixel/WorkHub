@@ -20,6 +20,8 @@ export async function createWorkRequest(formData: FormData) {
   const { supabase, user, membership } = await requestContext();
   const { error } = await supabase.from('work_requests').insert({ organization_id: membership.organization_id, requester_id: user.id, title, body, status: 'submitted' });
   if (error) throw new Error('Unable to submit request.');
+  const { data: admins } = await supabase.from('organization_members').select('user_id').eq('organization_id', membership.organization_id).eq('status', 'approved').in('role', ['organization_admin', 'system_admin']);
+  await Promise.all((admins ?? []).filter((item) => item.user_id !== user.id).map((item) => supabase.rpc('create_organization_notification', { target_user_id: item.user_id, target_organization_id: membership.organization_id, notification_kind: 'request_submitted', notification_title: '새 업무 요청', notification_body: title, notification_link: '/requests' })));
   revalidatePath('/requests');
 }
 
@@ -35,5 +37,26 @@ export async function decideWorkRequest(formData: FormData) {
   const { error } = await supabase.from('work_requests').update({ status, approver_id: user.id, decision_note: decisionNote || null, decided_at: new Date().toISOString() }).eq('id', id);
   if (error) throw new Error('Unable to decide request.');
   await supabase.rpc('create_organization_notification', { target_user_id: request.requester_id, target_organization_id: request.organization_id, notification_kind: 'request_decided', notification_title: `Request ${status}`, notification_body: request.title, notification_link: '/requests' });
+  revalidatePath('/requests');
+}
+
+export async function startWorkRequestReview(formData: FormData) {
+  const id = String(formData.get('id') ?? '');
+  if (!id) return;
+  const { supabase, membership } = await requestContext();
+  if (!['organization_admin', 'system_admin'].includes(membership.role)) throw new Error('Administrator access required.');
+  const { error } = await supabase.from('work_requests').update({ status: 'under_review' }).eq('id', id).eq('organization_id', membership.organization_id).eq('status', 'submitted');
+  if (error) throw new Error('Unable to start review.');
+  const { data: request } = await supabase.from('work_requests').select('requester_id,title').eq('id', id).maybeSingle();
+  if (request) await supabase.rpc('create_organization_notification', { target_user_id: request.requester_id, target_organization_id: membership.organization_id, notification_kind: 'request_review', notification_title: '요청 검토 시작', notification_body: request.title, notification_link: '/requests' });
+  revalidatePath('/requests');
+}
+
+export async function cancelWorkRequest(formData: FormData) {
+  const id = String(formData.get('id') ?? '');
+  if (!id) return;
+  const { supabase, user, membership } = await requestContext();
+  const { error } = await supabase.from('work_requests').update({ status: 'cancelled' }).eq('id', id).eq('organization_id', membership.organization_id).eq('requester_id', user.id).in('status', ['draft', 'submitted', 'under_review']);
+  if (error) throw new Error('Unable to cancel request.');
   revalidatePath('/requests');
 }
