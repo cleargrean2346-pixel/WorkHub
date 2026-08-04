@@ -1,0 +1,5 @@
+'use server';
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+export async function updateDataRequest(formData: FormData) { const id = String(formData.get('id') ?? ''), status = String(formData.get('status') ?? ''); if (!id || !['requested','reviewing','completed','rejected'].includes(status)) return; const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) redirect('/login'); const { data: member } = await supabase.from('organization_members').select('role').eq('user_id', user.id).eq('status', 'approved').in('role', ['organization_admin','system_admin']).limit(1).maybeSingle(); if (!member) throw new Error('관리자 권한이 필요합니다.'); const { error } = await supabase.from('data_deletion_requests').update({ status, reviewed_by: user.id, reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', id); if (error) throw new Error('요청 상태를 저장하지 못했습니다.'); revalidatePath('/manage/data-requests'); }
