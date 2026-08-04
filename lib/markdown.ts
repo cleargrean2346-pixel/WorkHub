@@ -1,9 +1,7 @@
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[character] ?? character);
-}
+function escapeHtml(value: string) { return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[character] ?? character); }
 
-// Deliberately supports the authoring subset offered by the editor. Raw HTML
-// is escaped first, so user-authored post content cannot inject markup.
+// The editor intentionally supports a small Markdown subset. Escaping first
+// means author-entered HTML cannot become executable markup.
 export function renderPostMarkdown(value: string) {
   return escapeHtml(value)
     .replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, '<img src="$2" alt="$1" loading="lazy" />')
@@ -14,6 +12,7 @@ export function renderPostMarkdown(value: string) {
     .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
     .replace(/^- \[ \] (.*)$/gm, '<p>☐ $1</p>')
     .replace(/^- \[x\] (.*)$/gim, '<p>☑ $1</p>')
+    .replace(/^- (.*)$/gm, '<p>• $1</p>')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\n/g, '<br />');
