@@ -1,0 +1,4 @@
+.sidebar {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
